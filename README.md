@@ -1,5 +1,5 @@
 # Pointnet2.ScanNet
-PointNet++ Semantic Segmentation on ScanNet with CUDA acceleration
+PointNet++ Semantic Segmentation on ScanNet in PyTorch with CUDA acceleration
 
 ## Installation
 ### Requirements
