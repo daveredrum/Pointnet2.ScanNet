@@ -10,3 +10,6 @@ pointnet2/pointnet2.egg-info
 
 # prep data
 preprocessing/scannet_scenes
+
+# outputs
+outputs/
