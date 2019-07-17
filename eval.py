@@ -89,19 +89,25 @@ def compute_acc(coords, preds, targets, weights):
     return pointacc, pointacc_per_class, voxacc, voxacc_per_class, voxcaliacc
 
 def compute_miou(coords, preds, targets, weights):
-    miou = np.zeros((coords.shape[0], NUM_CLASSES))
+    pointmiou = np.zeros((coords.shape[0], NUM_CLASSES))
+    voxmiou = np.zeros((coords.shape[0], NUM_CLASSES))
     for b in range(coords.shape[0]):
         uvidx, uvlabel, _ = point_cloud_label_to_surface_voxel_label_fast(coords[b,weights[b,:]>0,:], np.concatenate((np.expand_dims(targets[b,weights[b,:]>0],1),np.expand_dims(preds[b,weights[b,:]>0],1)),axis=1), res=0.02)
         for l in range(NUM_CLASSES):
             if l == 0: continue
+            target_label = np.arange(targets[b].shape[0])[targets[b]==l]
+            pred_label = np.arange(preds[b].shape[0])[preds[b]==l]
+            num_intersection_label = np.intersect1d(pred_label, target_label).shape[0]
+            num_union_label = np.union1d(pred_label, target_label).shape[0]
+            pointmiou[b, l] = num_intersection_label / (num_union_label + 1e-8)
+
             target_label_vox = uvidx[(uvlabel[:, 0] == l)]
             pred_label_vox = uvidx[(uvlabel[:, 1] == l)]
-            num_intersection_label = np.intersect1d(pred_label_vox, target_label_vox).shape[0]
-            num_union_label = np.union1d(pred_label_vox, target_label_vox).shape[0]
-            iou = num_intersection_label / (num_union_label + 1e-8)
-            miou[b, l] = iou
+            num_intersection_label_vox = np.intersect1d(pred_label_vox, target_label_vox).shape[0]
+            num_union_label_vox = np.union1d(pred_label_vox, target_label_vox).shape[0]
+            voxmiou[b, l] = num_intersection_label_vox / (num_union_label_vox + 1e-8)
 
-    return np.mean(miou, axis=0)
+    return np.mean(pointmiou, axis=0), np.mean(voxmiou, axis=0)
 
 def eval_one_batch(args, model, data):
     # unpack
@@ -117,9 +123,9 @@ def eval_one_batch(args, model, data):
     targets = targets.squeeze(0).cpu().numpy()   # (CK, N, C)
     weights = weights.squeeze(0).cpu().numpy()   # (CK, N, C)
     pointacc, pointacc_per_class, voxacc, voxacc_per_class, voxcaliacc = compute_acc(coords, preds, targets, weights)
-    voxmiou = compute_miou(coords, preds, targets, weights)
+    pointmiou, voxmiou = compute_miou(coords, preds, targets, weights)
 
-    return pointacc, pointacc_per_class, voxacc, voxacc_per_class, voxcaliacc, voxmiou
+    return pointacc, pointacc_per_class, voxacc, voxacc_per_class, voxcaliacc, pointmiou, voxmiou
 
 
 def eval_wholescene(args, model, dataloader):
@@ -129,12 +135,13 @@ def eval_wholescene(args, model, dataloader):
     voxacc_list = []
     voxacc_per_class_array = np.zeros((len(dataloader), NUM_CLASSES-1))
     voxcaliacc_list = []
+    pointmiou_per_class_array = np.zeros((len(dataloader), NUM_CLASSES-1))
     voxmiou_per_class_array = np.zeros((len(dataloader), NUM_CLASSES-1))
 
     # iter
     for load_idx, data in enumerate(dataloader):
         # feed
-        pointacc, pointacc_per_class, voxacc, voxacc_per_class, voxcaliacc, voxmiou = eval_one_batch(args, model, data)
+        pointacc, pointacc_per_class, voxacc, voxacc_per_class, voxcaliacc, pointmiou, voxmiou = eval_one_batch(args, model, data)
 
         # dump
         pointacc_list.append(pointacc)
@@ -142,9 +149,10 @@ def eval_wholescene(args, model, dataloader):
         voxacc_list.append(voxacc)
         voxacc_per_class_array[load_idx] = voxacc_per_class[1:]
         voxcaliacc_list.append(voxcaliacc)
+        pointmiou_per_class_array[load_idx] = pointmiou[1:]
         voxmiou_per_class_array[load_idx] = voxmiou[1:]
 
-    return pointacc_list, pointacc_per_class_array, voxacc_list, voxacc_per_class_array, voxcaliacc_list, voxmiou_per_class_array
+    return pointacc_list, pointacc_per_class_array, voxacc_list, voxacc_per_class_array, voxcaliacc_list, pointmiou_per_class_array, voxmiou_per_class_array
 
 def evaluate(args):
     # prepare data
@@ -163,7 +171,7 @@ def evaluate(args):
 
     # eval
     print("evaluating...")
-    pointacc_list, pointacc_per_class_array, voxacc_list, voxacc_per_class_array, voxcaliacc_list, voxmiou_per_class_array = eval_wholescene(args, model, dataloader)
+    pointacc_list, pointacc_per_class_array, voxacc_list, voxacc_per_class_array, voxcaliacc_list, pointmiou_per_class_array, voxmiou_per_class_array = eval_wholescene(args, model, dataloader)
     
     avg_pointacc = np.mean(pointacc_list)
     avg_pointacc_per_class = np.mean(pointacc_per_class_array, axis=0)
@@ -173,6 +181,9 @@ def evaluate(args):
 
     avg_voxcaliacc = np.mean(voxcaliacc_list)
     
+    avg_pointmiou_per_class = np.mean(pointmiou_per_class_array, axis=0)
+    avg_pointmiou = np.mean(avg_pointmiou_per_class)
+
     avg_voxmiou_per_class = np.mean(voxmiou_per_class_array, axis=0)
     avg_voxmiou = np.mean(avg_voxmiou_per_class)
 
@@ -183,13 +194,14 @@ def evaluate(args):
     print("Voxel accuracy: {}".format(avg_voxacc))
     print("Voxel accuracy per class: {}".format(np.mean([e for e in avg_voxacc_per_class if e != 0])))
     print("Calibrated voxel accuracy: {}".format(avg_voxcaliacc))
+    print("Point miou: {}".format(avg_pointmiou))
     print("Voxel miou: {}".format(avg_voxmiou))
     print()
 
-    print("Point acc/voxel acc/miou per class:")
+    print("Point acc/voxel acc/point miou/voxel miou per class:")
     for l in range(NUM_CLASSES):
         if l == 0: continue
-        print("Class {}: {}/{}/{}".format(NYUCLASSES[l], avg_pointacc_per_class[l-1], avg_voxacc_per_class[l-1], avg_voxmiou_per_class[l-1]))
+        print("Class {}: {}/{}/{}/{}".format(NYUCLASSES[l], avg_pointacc_per_class[l-1], avg_voxacc_per_class[l-1], avg_pointmiou_per_class[l-1], avg_voxmiou_per_class[l-1]))
 
 
 if __name__ == "__main__":

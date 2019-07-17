@@ -18,7 +18,8 @@ ITER_REPORT_TEMPLATE = """
 [sco.] train_point_acc_per_class: {train_point_acc_per_class}
 [sco.] train_voxel_acc: {train_voxel_acc}
 [sco.] train_voxel_acc_per_class: {train_voxel_acc_per_class}
-[sco.] train_miou: {train_miou}
+[sco.] train_point_miou: {train_point_miou}
+[sco.] train_voxel_miou: {train_voxel_miou}
 [info] mean_fetch_time: {mean_fetch_time}s
 [info] mean_forward_time: {mean_forward_time}s
 [info] mean_backward_time: {mean_backward_time}s
@@ -29,17 +30,19 @@ ITER_REPORT_TEMPLATE = """
 EPOCH_REPORT_TEMPLATE = """
 ------------------------summary------------------------
 [train] train_loss: {train_loss}
-[sco.]  train_point_acc: {train_point_acc}
-[sco.]  train_point_acc_per_class: {train_point_acc_per_class}
-[sco.]  train_voxel_acc: {train_voxel_acc}
-[sco.]  train_voxel_acc_per_class: {train_voxel_acc_per_class}
-[train] train_miou: {train_miou}
+[train] train_point_acc: {train_point_acc}
+[train] train_point_acc_per_class: {train_point_acc_per_class}
+[train] train_voxel_acc: {train_voxel_acc}
+[train] train_voxel_acc_per_class: {train_voxel_acc_per_class}
+[train] train_point_miou: {train_point_miou}
+[train] train_voxel_miou: {train_voxel_miou}
 [val]   val_loss: {val_loss}
-[sco.]  val_point_acc: {val_point_acc}
-[sco.]  val_point_acc_per_class: {val_point_acc_per_class}
-[sco.]  val_voxel_acc: {val_voxel_acc}
-[sco.]  val_voxel_acc_per_class: {val_voxel_acc_per_class}
-[val]   val_miou: {val_miou}
+[val]   val_point_acc: {val_point_acc}
+[val]   val_point_acc_per_class: {val_point_acc_per_class}
+[val]   val_voxel_acc: {val_voxel_acc}
+[val]   val_voxel_acc_per_class: {val_voxel_acc_per_class}
+[val]   val_point_miou: {val_point_miou}
+[val]   val_voxel_miou: {val_voxel_miou}
 """
 
 BEST_REPORT_TEMPLATE = """
@@ -50,7 +53,8 @@ BEST_REPORT_TEMPLATE = """
 [sco.] point_acc_per_class: {point_acc_per_class}
 [sco.] voxel_acc: {voxel_acc}
 [sco.] voxel_acc_per_class: {voxel_acc_per_class}
-[sco.] miou: {miou}
+[sco.] point_miou: {point_miou}
+[sco.] voxel_miou: {voxel_miou}
 """
 
 class Solver():
@@ -73,7 +77,8 @@ class Solver():
             "point_acc_per_class": -float("inf"),
             "voxel_acc": -float("inf"),
             "voxel_acc_per_class": -float("inf"),
-            "miou": -float("inf"),
+            "point_miou": -float("inf"),
+            "voxel_miou": -float("inf"),
         }
 
         # log
@@ -185,7 +190,8 @@ class Solver():
             "point_acc_per_class": [],
             "voxel_acc": [],
             "voxel_acc_per_class": [],
-            "miou": [],
+            "point_miou": [],
+            "voxel_miou": [],
         }
         for iter_id, data in enumerate(train_loader):
             # initialize the running loss
@@ -197,7 +203,8 @@ class Solver():
                 "point_acc_per_class": 0,
                 "voxel_acc": 0,
                 "voxel_acc_per_class": 0,
-                "miou": 0,
+                "point_miou": 0,
+                "voxel_miou": 0,
             }
 
             # unpack the data
@@ -223,7 +230,8 @@ class Solver():
             self.log[phase][epoch_id]["point_acc_per_class"].append(self._running_log["point_acc_per_class"])
             self.log[phase][epoch_id]["voxel_acc"].append(self._running_log["voxel_acc"])
             self.log[phase][epoch_id]["voxel_acc_per_class"].append(self._running_log["voxel_acc_per_class"])
-            self.log[phase][epoch_id]["miou"].append(self._running_log["miou"])
+            self.log[phase][epoch_id]["point_miou"].append(self._running_log["point_miou"])
+            self.log[phase][epoch_id]["voxel_miou"].append(self._running_log["voxel_miou"])
 
             # report
             iter_time = self.log[phase][epoch_id]["fetch"][-1]
@@ -253,7 +261,8 @@ class Solver():
             "point_acc_per_class": [],
             "voxel_acc": [],
             "voxel_acc_per_class": [],
-            "miou": [],
+            "point_miou": [],
+            "voxel_miou": [],
         }
         for iter_id, data in enumerate(val_loader):
             # initialize the running loss
@@ -265,7 +274,8 @@ class Solver():
                 "point_acc_per_class": 0,
                 "voxel_acc": 0,
                 "voxel_acc_per_class": 0,
-                "miou": 0,
+                "point_miou": 0,
+                "voxel_miou": 0,
             }
 
             # unpack the data
@@ -284,10 +294,11 @@ class Solver():
             self.log[phase][epoch_id]["point_acc_per_class"].append(self._running_log["point_acc_per_class"])
             self.log[phase][epoch_id]["voxel_acc"].append(self._running_log["voxel_acc"])
             self.log[phase][epoch_id]["voxel_acc_per_class"].append(self._running_log["voxel_acc_per_class"])
-            self.log[phase][epoch_id]["miou"].append(self._running_log["miou"])
+            self.log[phase][epoch_id]["point_miou"].append(self._running_log["point_miou"])
+            self.log[phase][epoch_id]["voxel_miou"].append(self._running_log["voxel_miou"])
 
         # check best
-        cur_criterion = "miou"
+        cur_criterion = "voxel_miou"
         cur_best = np.mean(self.log[phase][epoch_id][cur_criterion])
         if cur_best > self.best[cur_criterion]:
             print("best {} achieved: {}".format(cur_criterion, cur_best))
@@ -299,7 +310,8 @@ class Solver():
             self.best["point_acc_per_class"] = np.mean(self.log[phase][epoch_id]["point_acc_per_class"])
             self.best["voxel_acc"] = np.mean(self.log[phase][epoch_id]["voxel_acc"])
             self.best["voxel_acc_per_class"] = np.mean(self.log[phase][epoch_id]["voxel_acc_per_class"])
-            self.best["miou"] = np.mean(self.log[phase][epoch_id]["miou"])
+            self.best["point_miou"] = np.mean(self.log[phase][epoch_id]["point_miou"])
+            self.best["voxel_miou"] = np.mean(self.log[phase][epoch_id]["voxel_miou"])
 
             # save model
             print("saving models...\n")
@@ -319,13 +331,16 @@ class Solver():
             weights = weights.cpu().numpy()             # (B, N, C)
 
         pointacc, pointacc_per_class, voxacc, voxacc_per_class, _ = compute_acc(coords, preds, targets, weights)
-        voxmiou = compute_miou(coords, preds, targets, weights)
+        valid_pointacc_per_class = [e for e in pointacc_per_class if e != 0]
+        valid_voxacc_per_class = [e for e in voxacc_per_class if e != 0]
+        pointmiou, voxmiou = compute_miou(coords, preds, targets, weights)
         
         self._running_log["point_acc"] = pointacc
-        self._running_log["point_acc_per_class"] = np.mean([e for e in pointacc_per_class if e != 0])
+        self._running_log["point_acc_per_class"] = np.mean(valid_pointacc_per_class) if len(valid_pointacc_per_class) != 0 else 0
         self._running_log["voxel_acc"] = voxacc
-        self._running_log["voxel_acc_per_class"] = np.mean([e for e in voxacc_per_class if e != 0])
-        self._running_log["miou"] = voxmiou
+        self._running_log["voxel_acc_per_class"] = np.mean(valid_voxacc_per_class) if len(valid_voxacc_per_class) != 0 else 0
+        self._running_log["point_miou"] = pointmiou
+        self._running_log["voxel_miou"] = voxmiou
 
     def _dump_log(self, epoch_id):
         # loss
@@ -372,10 +387,18 @@ class Solver():
             epoch_id
         )
         self._log_writer.add_scalars(
-            "eval/{}".format("miou"),
+            "eval/{}".format("point_miou"),
             {
-                "train": np.mean([miou for miou in self.log["train"][epoch_id]["miou"]]),
-                "val": np.mean([miou for miou in self.log["val"][epoch_id]["miou"]])
+                "train": np.mean([miou for miou in self.log["train"][epoch_id]["point_miou"]]),
+                "val": np.mean([miou for miou in self.log["val"][epoch_id]["point_miou"]])
+            },
+            epoch_id
+        )
+        self._log_writer.add_scalars(
+            "eval/{}".format("voxel_miou"),
+            {
+                "train": np.mean([miou for miou in self.log["train"][epoch_id]["voxel_miou"]]),
+                "val": np.mean([miou for miou in self.log["val"][epoch_id]["voxel_miou"]])
             },
             epoch_id
         )
@@ -401,7 +424,8 @@ class Solver():
             train_point_acc_per_class=round(np.mean([acc for acc in self.log["train"][epoch_id]["point_acc_per_class"]]), 5),
             train_voxel_acc=round(np.mean([acc for acc in self.log["train"][epoch_id]["voxel_acc"]]), 5),
             train_voxel_acc_per_class=round(np.mean([acc for acc in self.log["train"][epoch_id]["voxel_acc_per_class"]]), 5),
-            train_miou=round(np.mean([miou for miou in self.log["train"][epoch_id]["miou"]]), 5),
+            train_point_miou=round(np.mean([miou for miou in self.log["train"][epoch_id]["point_miou"]]), 5),
+            train_voxel_miou=round(np.mean([miou for miou in self.log["train"][epoch_id]["voxel_miou"]]), 5),
             mean_fetch_time=round(np.mean(fetch_time), 5),
             mean_forward_time=round(np.mean(forward_time), 5),
             mean_backward_time=round(np.mean(backward_time), 5),
@@ -420,13 +444,15 @@ class Solver():
             train_point_acc_per_class=round(np.mean([acc for acc in self.log["train"][epoch_id]["point_acc_per_class"]]), 5),
             train_voxel_acc=round(np.mean([acc for acc in self.log["train"][epoch_id]["voxel_acc"]]), 5),
             train_voxel_acc_per_class=round(np.mean([acc for acc in self.log["train"][epoch_id]["voxel_acc_per_class"]]), 5),
-            train_miou=round(np.mean([miou for miou in self.log["train"][epoch_id]["miou"]]), 5),
+            train_point_miou=round(np.mean([miou for miou in self.log["train"][epoch_id]["point_miou"]]), 5),
+            train_voxel_miou=round(np.mean([miou for miou in self.log["train"][epoch_id]["voxel_miou"]]), 5),
             val_loss=round(np.mean([loss for loss in self.log["val"][epoch_id]["loss"]]), 5),
             val_point_acc=round(np.mean([acc for acc in self.log["val"][epoch_id]["point_acc"]]), 5),
             val_point_acc_per_class=round(np.mean([acc for acc in self.log["val"][epoch_id]["point_acc_per_class"]]), 5),
             val_voxel_acc=round(np.mean([acc for acc in self.log["val"][epoch_id]["voxel_acc"]]), 5),
             val_voxel_acc_per_class=round(np.mean([acc for acc in self.log["val"][epoch_id]["voxel_acc_per_class"]]), 5),
-            val_miou=round(np.mean([miou for miou in self.log["val"][epoch_id]["miou"]]), 5),
+            val_point_miou=round(np.mean([miou for miou in self.log["val"][epoch_id]["point_miou"]]), 5),
+            val_voxel_miou=round(np.mean([miou for miou in self.log["val"][epoch_id]["voxel_miou"]]), 5),
         )
         print(epoch_report)
     
@@ -439,7 +465,8 @@ class Solver():
             point_acc_per_class=round(self.best["point_acc_per_class"], 5),
             voxel_acc=round(self.best["voxel_acc"], 5),
             voxel_acc_per_class=round(self.best["voxel_acc_per_class"], 5),
-            miou=round(self.best["miou"], 5),
+            point_miou=round(self.best["point_miou"], 5),
+            voxel_miou=round(self.best["voxel_miou"], 5),
         )
         print(best_report)
         with open(os.path.join(CONF.OUTPUT_ROOT, self.stamp, "best.txt"), "w") as f:

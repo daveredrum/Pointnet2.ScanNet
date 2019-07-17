@@ -7,7 +7,7 @@ class WeightedCrossEntropyLoss(nn.Module):
         super(WeightedCrossEntropyLoss, self).__init__()
         self.ignore_index = ignore_index
     
-    def forward(self, inputs, targets, weights):
+    def forward(self, inputs, targets, weights=None):
         assert inputs.size(0) == targets.size(0) == weights.size(0)
         
         loss = F.cross_entropy(input=inputs, target=targets, reduction="none", ignore_index=self.ignore_index)
