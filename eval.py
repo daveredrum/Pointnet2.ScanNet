@@ -12,9 +12,11 @@ from pc_util import point_cloud_label_to_surface_voxel_label_fast
 import sys
 sys.path.append(".")
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pointnet2/'))
+from lib.config import CONF
 
 # META
-NUM_CLASSES = 21
+NYUCLASSES = ['unannotated', 'wall', 'floor', 'chair', 'table', 'desk', 'bed', 'bookshelf', 'sofa', 'sink', 'bathtub', 'toilet', 'curtain', 'counter', 'door', 'window', 'shower curtain', 'refrigerator', 'picture', 'cabinet', 'otherfurniture']
+NUM_CLASSES = len(NYUCLASSES)
 
 def get_scene_list(path):
     scene_list = []
@@ -80,6 +82,21 @@ def compute_acc(coords, preds, targets, weights):
 
     return pointacc, voxacc, voxcaliacc
 
+def compute_miou(coords, preds, targets, weights):
+    miou = np.zeros((coords.shape[0], NUM_CLASSES))
+    for b in range(coords.shape[0]):
+        uvidx, uvlabel, _ = point_cloud_label_to_surface_voxel_label_fast(coords[b,weights[b,:]>0,:], np.concatenate((np.expand_dims(targets[b,weights[b,:]>0],1),np.expand_dims(preds[b,weights[b,:]>0],1)),axis=1), res=0.02)
+        for l in range(NUM_CLASSES):
+            if l == 0: continue
+            target_label_vox = uvidx[(uvlabel[:, 0] == l)]
+            pred_label_vox = uvidx[(uvlabel[:, 1] == l)]
+            num_intersection_label = np.intersect1d(pred_label_vox, target_label_vox).shape[0]
+            num_union_label = np.union1d(pred_label_vox, target_label_vox).shape[0]
+            iou = num_intersection_label / (num_union_label + 1e-8)
+            miou[b, l] = iou
+
+    return miou
+
 def eval_one_batch(args, model, data):
     # unpack
     coords, feats, targets, weights, _ = data
@@ -94,8 +111,9 @@ def eval_one_batch(args, model, data):
     targets = targets.squeeze(0).cpu().numpy()   # (CK, N, C)
     weights = weights.squeeze(0).cpu().numpy()   # (CK, N, C)
     pointacc, voxacc, voxcaliacc = compute_acc(coords, preds, targets, weights)
+    voxmiou = compute_miou(coords, preds, targets, weights)
 
-    return pointacc, voxacc, voxcaliacc
+    return pointacc, voxacc, voxcaliacc, voxmiou
 
 
 def eval_wholescene(args, model, dataloader):
@@ -103,18 +121,21 @@ def eval_wholescene(args, model, dataloader):
     pointacc_list = []
     voxacc_list = []
     voxcaliacc_list = []
+    voxmiou_per_class_array = np.zeros((len(dataloader), NUM_CLASSES-1))
 
     # iter
-    for data in dataloader:
+    for load_idx, data in enumerate(dataloader):
         # feed
-        pointacc, voxacc, voxcaliacc = eval_one_batch(args, model, data)
+        pointacc, voxacc, voxcaliacc, voxmiou = eval_one_batch(args, model, data)
+        voxmiou_per_class = np.mean(voxmiou[:, 1:], axis=0)
 
         # dump
         pointacc_list.append(pointacc)
         voxacc_list.append(voxacc)
         voxcaliacc_list.append(voxcaliacc)
+        voxmiou_per_class_array[load_idx] = voxmiou_per_class
 
-    return pointacc_list, voxacc_list, voxcaliacc_list
+    return pointacc_list, voxacc_list, voxcaliacc_list, voxmiou_per_class_array
 
 def evaluate(args):
     # prepare data
@@ -133,17 +154,26 @@ def evaluate(args):
 
     # eval
     print("evaluating...")
-    pointacc_list, voxacc_list, voxcaliacc_list = eval_wholescene(args, model, dataloader)
+    pointacc_list, voxacc_list, voxcaliacc_list, voxmiou_per_class_array = eval_wholescene(args, model, dataloader)
     avg_pointacc = np.mean(pointacc_list)
     avg_voxacc = np.mean(voxacc_list)
     avg_voxcaliacc = np.mean(voxcaliacc_list)
+    avg_voxmiou_per_class = np.mean(voxmiou_per_class_array, axis=0)
+    avg_voxmiou = np.mean(avg_voxmiou_per_class)
 
     # report
     print()
     print("Point accuracy: {}".format(avg_pointacc))
-    print("Voxel-based point accuracy: {}".format(avg_voxacc))
-    print("Calibrated point accuracy: {}".format(avg_voxcaliacc))
+    print("Voxel accuracy: {}".format(avg_voxacc))
+    print("Calibrated voxel accuracy: {}".format(avg_voxcaliacc))
+    print("Voxel miou: {}".format(avg_voxmiou))
+    print()
 
+    for l in range(NUM_CLASSES):
+        if l == 0: continue
+        print("Voxel accuracy for class {}: {}".format(NYUCLASSES[l], avg_voxmiou_per_class[l-1]))
+
+        
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--folder', type=str, help='output folder containing the best model from training', required=True)
