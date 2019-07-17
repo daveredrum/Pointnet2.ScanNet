@@ -82,7 +82,7 @@ def train(args):
         is_wholescene = False
 
     train_dataset, train_dataloader = get_dataloader(args, train_scene_list, True, False)
-    val_dataset, val_dataloader = get_dataloader(args, val_scene_list, True, is_wholescene)
+    val_dataset, val_dataloader = get_dataloader(args, val_scene_list, False, is_wholescene)
     dataloader = {
         "train": train_dataloader,
         "val": val_dataloader
