@@ -3,16 +3,21 @@ import time
 import torch
 import numpy as np
 from tensorboardX import SummaryWriter
+from torch.optim.lr_scheduler import StepLR
 
 import sys
 sys.path.append(".")
 from lib.utils import decode_eta
 from lib.config import CONF
+from eval import compute_acc, compute_miou
 
 ITER_REPORT_TEMPLATE = """
 ----------------------iter: [{global_iter_id}/{total_iter}]----------------------
 [loss] train_loss: {train_loss}
-[sco.] train_acc: {train_acc}
+[sco.] train_point_acc: {train_point_acc}
+[sco.] train_point_acc_per_class: {train_point_acc_per_class}
+[sco.] train_voxel_acc: {train_voxel_acc}
+[sco.] train_voxel_acc_per_class: {train_voxel_acc_per_class}
 [sco.] train_miou: {train_miou}
 [info] mean_fetch_time: {mean_fetch_time}s
 [info] mean_forward_time: {mean_forward_time}s
@@ -24,10 +29,16 @@ ITER_REPORT_TEMPLATE = """
 EPOCH_REPORT_TEMPLATE = """
 ------------------------summary------------------------
 [train] train_loss: {train_loss}
-[train] train_acc: {train_acc}
+[sco.]  train_point_acc: {train_point_acc}
+[sco.]  train_point_acc_per_class: {train_point_acc_per_class}
+[sco.]  train_voxel_acc: {train_voxel_acc}
+[sco.]  train_voxel_acc_per_class: {train_voxel_acc_per_class}
 [train] train_miou: {train_miou}
 [val]   val_loss: {val_loss}
-[val]   val_acc: {val_acc}
+[sco.]  val_point_acc: {val_point_acc}
+[sco.]  val_point_acc_per_class: {val_point_acc_per_class}
+[sco.]  val_voxel_acc: {val_voxel_acc}
+[sco.]  val_voxel_acc_per_class: {val_voxel_acc_per_class}
 [val]   val_miou: {val_miou}
 """
 
@@ -35,7 +46,10 @@ BEST_REPORT_TEMPLATE = """
 -----------------------------best-----------------------------
 [best] epoch: {epoch}
 [loss] loss: {loss}
-[sco.] acc: {acc}
+[sco.] point_acc: {point_acc}
+[sco.] point_acc_per_class: {point_acc_per_class}
+[sco.] voxel_acc: {voxel_acc}
+[sco.] voxel_acc_per_class: {voxel_acc_per_class}
 [sco.] miou: {miou}
 """
 
@@ -51,10 +65,15 @@ class Solver():
         self.batch_size = batch_size
         self.stamp = stamp
         self.is_wholescene = is_wholescene
+        self.scheduler = StepLR(optimizer, step_size=100, gamma=0.7)
         self.best = {
             "epoch": 0,
             "loss": float("inf"),
-            "acc": -float("inf"),
+            "point_acc": -float("inf"),
+            "point_acc_per_class": -float("inf"),
+            "voxel_acc": -float("inf"),
+            "voxel_acc_per_class": -float("inf"),
+            "miou": -float("inf"),
         }
 
         # log
@@ -100,6 +119,9 @@ class Solver():
             # load tensorboard
             self._dump_log(epoch_id)
 
+            # scheduler
+            self.scheduler.step()
+
         # print best
         self._best_report()
 
@@ -119,7 +141,7 @@ class Solver():
         else:
             raise ValueError("invalid phase")
 
-    def _forward(self, coord, feat):
+    def _forward(self, coord, feat, is_wholescene):
         if self.is_wholescene:
             pred = []
             coord_chunk, feat_chunk = torch.split(coord.squeeze(0), self.batch_size, 0), torch.split(feat.squeeze(0), self.batch_size, 0)
@@ -128,7 +150,7 @@ class Solver():
                 output = self.model(torch.cat([coord, feat], dim=2))
                 pred.append(output)
 
-            pred = torch.cat(pred, dim=0)
+            pred = torch.cat(pred, dim=0).unsqueeze(0)
         else:
             output = self.model(torch.cat([coord, feat], dim=2))
             pred = output
@@ -143,7 +165,7 @@ class Solver():
         self.optimizer.step()
 
     def _compute_loss(self, pred, target, weights):
-        num_classes = pred.size(2)
+        num_classes = pred.size(-1)
         loss = self.criterion(pred.contiguous().view(-1, num_classes), target.view(-1), weights.view(-1))
         self._running_log["loss"] = loss
 
@@ -159,8 +181,11 @@ class Solver():
             # loss (float, not torch.cuda.FloatTensor)
             "loss": [],
             # constraint loss (float, not torch.cuda.FloatTensor)
-            "acc": [],
-            "miou": []
+            "point_acc": [],
+            "point_acc_per_class": [],
+            "voxel_acc": [],
+            "voxel_acc_per_class": [],
+            "miou": [],
         }
         for iter_id, data in enumerate(train_loader):
             # initialize the running loss
@@ -168,8 +193,11 @@ class Solver():
                 # loss
                 "loss": 0,
                 # acc
-                "acc": 0,
-                "miou": 0
+                "point_acc": 0,
+                "point_acc_per_class": 0,
+                "voxel_acc": 0,
+                "voxel_acc_per_class": 0,
+                "miou": 0,
             }
 
             # unpack the data
@@ -179,9 +207,9 @@ class Solver():
 
             # forward
             start_forward = time.time()
-            preds = self._forward(coords, feats)
+            preds = self._forward(coords, feats, False)
             self._compute_loss(preds, semantic_segs, sample_weights)
-            self._eval(preds, semantic_segs)
+            self._eval(coords, preds, semantic_segs, sample_weights, False)
             self.log[phase][epoch_id]["forward"].append(time.time() - start_forward)
 
             # backward
@@ -191,7 +219,10 @@ class Solver():
 
             # record log
             self.log[phase][epoch_id]["loss"].append(self._running_log["loss"].item())
-            self.log[phase][epoch_id]["acc"].append(self._running_log["acc"])
+            self.log[phase][epoch_id]["point_acc"].append(self._running_log["point_acc"])
+            self.log[phase][epoch_id]["point_acc_per_class"].append(self._running_log["point_acc_per_class"])
+            self.log[phase][epoch_id]["voxel_acc"].append(self._running_log["voxel_acc"])
+            self.log[phase][epoch_id]["voxel_acc_per_class"].append(self._running_log["voxel_acc_per_class"])
             self.log[phase][epoch_id]["miou"].append(self._running_log["miou"])
 
             # report
@@ -218,8 +249,11 @@ class Solver():
             # loss (float, not torch.cuda.FloatTensor)
             "loss": [],
             # constraint loss (float, not torch.cuda.FloatTensor)
-            "acc": [],
-            "miou": []
+            "point_acc": [],
+            "point_acc_per_class": [],
+            "voxel_acc": [],
+            "voxel_acc_per_class": [],
+            "miou": [],
         }
         for iter_id, data in enumerate(val_loader):
             # initialize the running loss
@@ -227,8 +261,11 @@ class Solver():
                 # loss
                 "loss": 0,
                 # acc
-                "acc": 0,
-                "miou": 0
+                "point_acc": 0,
+                "point_acc_per_class": 0,
+                "voxel_acc": 0,
+                "voxel_acc_per_class": 0,
+                "miou": 0,
             }
 
             # unpack the data
@@ -237,17 +274,20 @@ class Solver():
             self.log[phase][epoch_id]["fetch"].append(fetch_time)
 
             # forward
-            preds = self._forward(coords, feats)
+            preds = self._forward(coords, feats, self.is_wholescene)
             self._compute_loss(preds, semantic_segs, sample_weights)
-            self._eval(preds, semantic_segs)
+            self._eval(coords, preds, semantic_segs, sample_weights, self.is_wholescene)
 
             # record log
             self.log[phase][epoch_id]["loss"].append(self._running_log["loss"].item())
-            self.log[phase][epoch_id]["acc"].append(self._running_log["acc"])
+            self.log[phase][epoch_id]["point_acc"].append(self._running_log["point_acc"])
+            self.log[phase][epoch_id]["point_acc_per_class"].append(self._running_log["point_acc_per_class"])
+            self.log[phase][epoch_id]["voxel_acc"].append(self._running_log["voxel_acc"])
+            self.log[phase][epoch_id]["voxel_acc_per_class"].append(self._running_log["voxel_acc_per_class"])
             self.log[phase][epoch_id]["miou"].append(self._running_log["miou"])
 
         # check best
-        cur_criterion = "acc"
+        cur_criterion = "miou"
         cur_best = np.mean(self.log[phase][epoch_id][cur_criterion])
         if cur_best > self.best[cur_criterion]:
             print("best {} achieved: {}".format(cur_criterion, cur_best))
@@ -255,7 +295,10 @@ class Solver():
             print("current val_loss: {}".format(np.mean(self.log["val"][epoch_id]["loss"])))
             self.best["epoch"] = epoch_id + 1
             self.best["loss"] = np.mean(self.log[phase][epoch_id]["loss"])
-            self.best["acc"] = np.mean(self.log[phase][epoch_id]["acc"])
+            self.best["point_acc"] = np.mean(self.log[phase][epoch_id]["point_acc"])
+            self.best["point_acc_per_class"] = np.mean(self.log[phase][epoch_id]["point_acc_per_class"])
+            self.best["voxel_acc"] = np.mean(self.log[phase][epoch_id]["voxel_acc"])
+            self.best["voxel_acc_per_class"] = np.mean(self.log[phase][epoch_id]["voxel_acc_per_class"])
             self.best["miou"] = np.mean(self.log[phase][epoch_id]["miou"])
 
             # save model
@@ -263,29 +306,26 @@ class Solver():
             model_root = os.path.join(CONF.OUTPUT_ROOT, self.stamp)
             torch.save(self.model.state_dict(), os.path.join(model_root, "model.pth"))
 
-    def _eval(self, preds, targets):
-        if self.is_wholescene:
-            preds = preds.max(2)[1]
-            targets = targets.squeeze(0)
+    def _eval(self, coords, preds, targets, weights, is_wholescene):
+        if is_wholescene:
+            coords = coords.squeeze(0).cpu().numpy()               # (CK, N, C)
+            preds = preds.max(3)[1].squeeze(0).cpu().numpy()       # (CK, N, C)
+            targets = targets.squeeze(0).cpu().numpy()             # (CK, N, C)
+            weights = weights.squeeze(0).cpu().numpy()             # (CK, N, C)
         else:
-            preds = preds.max(2)[1]
+            coords = coords.cpu().numpy()               # (B, N, C)
+            preds = preds.max(2)[1].cpu().numpy()       # (B, N, C)
+            targets = targets.cpu().numpy()             # (B, N, C)
+            weights = weights.cpu().numpy()             # (B, N, C)
 
-        # num_correct_nonzero = preds.eq(targets).sum().item() - preds[preds == 0].view(-1).size(0)
-        # num_total_nonzero = preds.view(-1).size(0) - preds[preds == 0].view(-1).size(0)
-        # self._running_log["acc"] = num_correct_nonzero / num_total_nonzero
-        self._running_log["acc"] = preds.eq(targets).sum().item() / preds.view(-1).size(0)
-
-        miou = []
-        for i in range(21):
-            # if i == 0: continue
-            pred_ids = torch.arange(preds.view(-1).size(0))[preds.view(-1) == i].tolist()
-            target_ids = torch.arange(targets.view(-1).size(0))[targets.view(-1) == i].tolist()
-            if len(target_ids) == 0: continue
-            num_correct = len(set(pred_ids).intersection(set(target_ids)))
-            num_union = len(set(pred_ids).union(set(target_ids)))
-            miou.append(num_correct / (num_union + 1e-8))
-
-        self._running_log["miou"] = np.mean(miou)
+        pointacc, pointacc_per_class, voxacc, voxacc_per_class, _ = compute_acc(coords, preds, targets, weights)
+        voxmiou = compute_miou(coords, preds, targets, weights)
+        
+        self._running_log["point_acc"] = pointacc
+        self._running_log["point_acc_per_class"] = np.mean([e for e in pointacc_per_class if e != 0])
+        self._running_log["voxel_acc"] = voxacc
+        self._running_log["voxel_acc_per_class"] = np.mean([e for e in voxacc_per_class if e != 0])
+        self._running_log["miou"] = voxmiou
 
     def _dump_log(self, epoch_id):
         # loss
@@ -300,10 +340,34 @@ class Solver():
 
         # eval
         self._log_writer.add_scalars(
-            "eval/{}".format("acc"),
+            "eval/{}".format("point_acc"),
             {
-                "train": np.mean([acc for acc in self.log["train"][epoch_id]["acc"]]),
-                "val": np.mean([acc for acc in self.log["val"][epoch_id]["acc"]])
+                "train": np.mean([acc for acc in self.log["train"][epoch_id]["point_acc"]]),
+                "val": np.mean([acc for acc in self.log["val"][epoch_id]["point_acc"]])
+            },
+            epoch_id
+        )
+        self._log_writer.add_scalars(
+            "eval/{}".format("point_acc_per_class"),
+            {
+                "train": np.mean([acc for acc in self.log["train"][epoch_id]["point_acc_per_class"]]),
+                "val": np.mean([acc for acc in self.log["val"][epoch_id]["point_acc_per_class"]])
+            },
+            epoch_id
+        )
+        self._log_writer.add_scalars(
+            "eval/{}".format("voxel_acc"),
+            {
+                "train": np.mean([acc for acc in self.log["train"][epoch_id]["voxel_acc"]]),
+                "val": np.mean([acc for acc in self.log["val"][epoch_id]["voxel_acc"]])
+            },
+            epoch_id
+        )
+        self._log_writer.add_scalars(
+            "eval/{}".format("voxel_acc_per_class"),
+            {
+                "train": np.mean([acc for acc in self.log["train"][epoch_id]["voxel_acc_per_class"]]),
+                "val": np.mean([acc for acc in self.log["val"][epoch_id]["voxel_acc_per_class"]])
             },
             epoch_id
         )
@@ -333,8 +397,11 @@ class Solver():
             global_iter_id=self._global_iter_id + 1,
             total_iter=self._total_iter["train"],
             train_loss=round(np.mean([loss for loss in self.log["train"][epoch_id]["loss"]]), 5),
-            train_acc=round(np.mean([loss for loss in self.log["train"][epoch_id]["acc"]]), 5),
-            train_miou=round(np.mean([loss for loss in self.log["train"][epoch_id]["miou"]]), 5),
+            train_point_acc=round(np.mean([acc for acc in self.log["train"][epoch_id]["point_acc"]]), 5),
+            train_point_acc_per_class=round(np.mean([acc for acc in self.log["train"][epoch_id]["point_acc_per_class"]]), 5),
+            train_voxel_acc=round(np.mean([acc for acc in self.log["train"][epoch_id]["voxel_acc"]]), 5),
+            train_voxel_acc_per_class=round(np.mean([acc for acc in self.log["train"][epoch_id]["voxel_acc_per_class"]]), 5),
+            train_miou=round(np.mean([miou for miou in self.log["train"][epoch_id]["miou"]]), 5),
             mean_fetch_time=round(np.mean(fetch_time), 5),
             mean_forward_time=round(np.mean(forward_time), 5),
             mean_backward_time=round(np.mean(backward_time), 5),
@@ -349,10 +416,16 @@ class Solver():
         print("epoch [{}/{}] done...".format(epoch_id+1, self.epoch))
         epoch_report = self.__epoch_report_template.format(
             train_loss=round(np.mean([loss for loss in self.log["train"][epoch_id]["loss"]]), 5),
-            train_acc=round(np.mean([acc for acc in self.log["train"][epoch_id]["acc"]]), 5),
+            train_point_acc=round(np.mean([acc for acc in self.log["train"][epoch_id]["point_acc"]]), 5),
+            train_point_acc_per_class=round(np.mean([acc for acc in self.log["train"][epoch_id]["point_acc_per_class"]]), 5),
+            train_voxel_acc=round(np.mean([acc for acc in self.log["train"][epoch_id]["voxel_acc"]]), 5),
+            train_voxel_acc_per_class=round(np.mean([acc for acc in self.log["train"][epoch_id]["voxel_acc_per_class"]]), 5),
             train_miou=round(np.mean([miou for miou in self.log["train"][epoch_id]["miou"]]), 5),
             val_loss=round(np.mean([loss for loss in self.log["val"][epoch_id]["loss"]]), 5),
-            val_acc=round(np.mean([acc for acc in self.log["val"][epoch_id]["acc"]]), 5),
+            val_point_acc=round(np.mean([acc for acc in self.log["val"][epoch_id]["point_acc"]]), 5),
+            val_point_acc_per_class=round(np.mean([acc for acc in self.log["val"][epoch_id]["point_acc_per_class"]]), 5),
+            val_voxel_acc=round(np.mean([acc for acc in self.log["val"][epoch_id]["voxel_acc"]]), 5),
+            val_voxel_acc_per_class=round(np.mean([acc for acc in self.log["val"][epoch_id]["voxel_acc_per_class"]]), 5),
             val_miou=round(np.mean([miou for miou in self.log["val"][epoch_id]["miou"]]), 5),
         )
         print(epoch_report)
@@ -362,7 +435,10 @@ class Solver():
         best_report = self.__best_report_template.format(
             epoch=self.best["epoch"],
             loss=round(self.best["loss"], 5),
-            acc=round(self.best["acc"], 5),
+            point_acc=round(self.best["point_acc"], 5),
+            point_acc_per_class=round(self.best["point_acc_per_class"], 5),
+            voxel_acc=round(self.best["voxel_acc"], 5),
+            voxel_acc_per_class=round(self.best["voxel_acc_per_class"], 5),
             miou=round(self.best["miou"], 5),
         )
         print(best_report)

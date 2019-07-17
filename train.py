@@ -81,7 +81,7 @@ def train(args):
     else:
         is_wholescene = False
 
-    train_dataset, train_dataloader = get_dataloader(args, train_scene_list, True, is_wholescene)
+    train_dataset, train_dataloader = get_dataloader(args, train_scene_list, True, False)
     val_dataset, val_dataloader = get_dataloader(args, val_scene_list, True, is_wholescene)
     dataloader = {
         "train": train_dataloader,
@@ -114,7 +114,7 @@ if __name__ == '__main__':
     parser.add_argument('--wd', type=float, help='weight decay', default=0)
     parser.add_argument('--bn', type=bool, help='batch norm', default=True)
     parser.add_argument("--debug", action="store_true")
-    parser.add_argument("--wholescene", action="store_true")
+    parser.add_argument("--wholescene", action="store_true", help="flag for whether the evaluation is on the whole scene or on a single chunk")
     args = parser.parse_args()
 
     # setting

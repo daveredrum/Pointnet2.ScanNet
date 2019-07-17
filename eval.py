@@ -53,14 +53,15 @@ def compute_acc(coords, preds, targets, weights):
     labelweights = np.zeros(NUM_CLASSES)
     labelweights_vox = np.zeros(NUM_CLASSES)
 
-    correct = np.sum((preds == targets) & (targets>0) & (weights>0)) # evaluate only on 20 categories but not unknown
+    correct = np.sum(preds == targets) # evaluate only on 20 categories but not unknown
     total_correct += correct
-    total_seen += np.sum((targets>0) & (weights>0))
+    total_seen += np.sum(targets>0)
     tmp,_ = np.histogram(targets,range(22))
     labelweights += tmp
     for l in range(NUM_CLASSES):
-        total_seen_class[l] += np.sum((targets==l) & (weights>0))
-        total_correct_class[l] += np.sum((preds==l) & (targets==l) & (weights>0))
+        if l == 0: continue
+        total_seen_class[l] += np.sum(targets==l)
+        total_correct_class[l] += np.sum((preds==l) & (targets==l))
 
     for b in range(coords.shape[0]):
         _, uvlabel, _ = point_cloud_label_to_surface_voxel_label_fast(coords[b,weights[b,:]>0,:], np.concatenate((np.expand_dims(targets[b,weights[b,:]>0],1),np.expand_dims(preds[b,weights[b,:]>0],1)),axis=1), res=0.02)
@@ -69,6 +70,7 @@ def compute_acc(coords, preds, targets, weights):
         tmp,_ = np.histogram(uvlabel[:,0],range(22))
         labelweights_vox += tmp
         for l in range(NUM_CLASSES):
+            if l == 0: continue
             total_seen_class_vox[l] += np.sum(uvlabel[:,0]==l)
             total_correct_class_vox[l] += np.sum((uvlabel[:,0]==l) & (uvlabel[:,1]==l))
 
@@ -77,10 +79,14 @@ def compute_acc(coords, preds, targets, weights):
 
     labelweights = labelweights[1:].astype(np.float32)/np.sum(labelweights[1:].astype(np.float32))
     labelweights_vox = labelweights_vox[1:].astype(np.float32)/np.sum(labelweights_vox[1:].astype(np.float32))
-    caliweights = np.array([0.388,0.357,0.038,0.033,0.017,0.02,0.016,0.025,0.002,0.002,0.002,0.007,0.006,0.022,0.004,0.0004,0.003,0.002,0.024,0.029])
+    # caliweights = np.array([0.388,0.357,0.038,0.033,0.017,0.02,0.016,0.025,0.002,0.002,0.002,0.007,0.006,0.022,0.004,0.0004,0.003,0.002,0.024,0.029])
+    caliweights = labelweights_vox
     voxcaliacc = np.average(np.array(total_correct_class_vox[1:])/(np.array(total_seen_class_vox[1:],dtype=np.float)+1e-6),weights=caliweights)
 
-    return pointacc, voxacc, voxcaliacc
+    pointacc_per_class = np.array([total_correct_class[l]/(total_seen_class[l] + 1e-8) for l in range(NUM_CLASSES)])
+    voxacc_per_class = np.array([total_seen_class_vox[l]/(total_seen_class_vox[l] + 1e-8) for l in range(NUM_CLASSES)])
+
+    return pointacc, pointacc_per_class, voxacc, voxacc_per_class, voxcaliacc
 
 def compute_miou(coords, preds, targets, weights):
     miou = np.zeros((coords.shape[0], NUM_CLASSES))
@@ -95,7 +101,7 @@ def compute_miou(coords, preds, targets, weights):
             iou = num_intersection_label / (num_union_label + 1e-8)
             miou[b, l] = iou
 
-    return miou
+    return np.mean(miou, axis=0)
 
 def eval_one_batch(args, model, data):
     # unpack
@@ -110,32 +116,35 @@ def eval_one_batch(args, model, data):
     preds = preds.squeeze(0).cpu().numpy()       # (CK, N, C)
     targets = targets.squeeze(0).cpu().numpy()   # (CK, N, C)
     weights = weights.squeeze(0).cpu().numpy()   # (CK, N, C)
-    pointacc, voxacc, voxcaliacc = compute_acc(coords, preds, targets, weights)
+    pointacc, pointacc_per_class, voxacc, voxacc_per_class, voxcaliacc = compute_acc(coords, preds, targets, weights)
     voxmiou = compute_miou(coords, preds, targets, weights)
 
-    return pointacc, voxacc, voxcaliacc, voxmiou
+    return pointacc, pointacc_per_class, voxacc, voxacc_per_class, voxcaliacc, voxmiou
 
 
 def eval_wholescene(args, model, dataloader):
     # init
     pointacc_list = []
+    pointacc_per_class_array = np.zeros((len(dataloader), NUM_CLASSES-1))
     voxacc_list = []
+    voxacc_per_class_array = np.zeros((len(dataloader), NUM_CLASSES-1))
     voxcaliacc_list = []
     voxmiou_per_class_array = np.zeros((len(dataloader), NUM_CLASSES-1))
 
     # iter
     for load_idx, data in enumerate(dataloader):
         # feed
-        pointacc, voxacc, voxcaliacc, voxmiou = eval_one_batch(args, model, data)
-        voxmiou_per_class = np.mean(voxmiou[:, 1:], axis=0)
+        pointacc, pointacc_per_class, voxacc, voxacc_per_class, voxcaliacc, voxmiou = eval_one_batch(args, model, data)
 
         # dump
         pointacc_list.append(pointacc)
+        pointacc_per_class_array[load_idx] = pointacc_per_class[1:]
         voxacc_list.append(voxacc)
+        voxacc_per_class_array[load_idx] = voxacc_per_class[1:]
         voxcaliacc_list.append(voxcaliacc)
-        voxmiou_per_class_array[load_idx] = voxmiou_per_class
+        voxmiou_per_class_array[load_idx] = voxmiou[1:]
 
-    return pointacc_list, voxacc_list, voxcaliacc_list, voxmiou_per_class_array
+    return pointacc_list, pointacc_per_class_array, voxacc_list, voxacc_per_class_array, voxcaliacc_list, voxmiou_per_class_array
 
 def evaluate(args):
     # prepare data
@@ -154,26 +163,35 @@ def evaluate(args):
 
     # eval
     print("evaluating...")
-    pointacc_list, voxacc_list, voxcaliacc_list, voxmiou_per_class_array = eval_wholescene(args, model, dataloader)
+    pointacc_list, pointacc_per_class_array, voxacc_list, voxacc_per_class_array, voxcaliacc_list, voxmiou_per_class_array = eval_wholescene(args, model, dataloader)
+    
     avg_pointacc = np.mean(pointacc_list)
+    avg_pointacc_per_class = np.mean(pointacc_per_class_array, axis=0)
+
     avg_voxacc = np.mean(voxacc_list)
+    avg_voxacc_per_class = np.mean(voxacc_per_class_array, axis=0)
+
     avg_voxcaliacc = np.mean(voxcaliacc_list)
+    
     avg_voxmiou_per_class = np.mean(voxmiou_per_class_array, axis=0)
     avg_voxmiou = np.mean(avg_voxmiou_per_class)
 
     # report
     print()
     print("Point accuracy: {}".format(avg_pointacc))
+    print("Point accuracy per class: {}".format(np.mean([e for e in avg_pointacc_per_class if e != 0])))
     print("Voxel accuracy: {}".format(avg_voxacc))
+    print("Voxel accuracy per class: {}".format(np.mean([e for e in avg_voxacc_per_class if e != 0])))
     print("Calibrated voxel accuracy: {}".format(avg_voxcaliacc))
     print("Voxel miou: {}".format(avg_voxmiou))
     print()
 
+    print("Point acc/voxel acc/miou per class:")
     for l in range(NUM_CLASSES):
         if l == 0: continue
-        print("Voxel accuracy for class {}: {}".format(NYUCLASSES[l], avg_voxmiou_per_class[l-1]))
+        print("Class {}: {}/{}/{}".format(NYUCLASSES[l], avg_pointacc_per_class[l-1], avg_voxacc_per_class[l-1], avg_voxmiou_per_class[l-1]))
 
-        
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--folder', type=str, help='output folder containing the best model from training', required=True)
