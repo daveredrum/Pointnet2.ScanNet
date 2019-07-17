@@ -17,12 +17,12 @@ from lib.loss import WeightedCrossEntropyLoss
 from lib.config import CONF
 
 
-def get_dataloader(args, scene_list, is_train=True, is_wholescene=False):
+def get_dataloader(args, scene_list, is_weighting=True, is_wholescene=False):
     if is_wholescene:
-        dataset = ScannetDatasetWholeScene(scene_list, is_train=is_train)
+        dataset = ScannetDatasetWholeScene(scene_list, is_weighting=is_weighting)
         dataloader = DataLoader(dataset, batch_size=1, collate_fn=collate_wholescene)
     else:
-        dataset = ScannetDataset(scene_list, is_train=is_train)
+        dataset = ScannetDataset(scene_list, is_weighting=is_weighting)
         dataloader = DataLoader(dataset, batch_size=args.batch_size, collate_fn=collate_random)
 
     return dataset, dataloader
@@ -76,13 +76,19 @@ def train(args):
         val_scene_list = get_scene_list(CONF.SCANNETV2_VAL)
 
     # dataloader
+
+    if args.weighting:
+        is_weighting = True
+    else:
+        is_weighting = False
+
     if args.wholescene:
         is_wholescene = True
     else:
         is_wholescene = False
 
-    train_dataset, train_dataloader = get_dataloader(args, train_scene_list, True, False)
-    val_dataset, val_dataloader = get_dataloader(args, val_scene_list, False, is_wholescene)
+    train_dataset, train_dataloader = get_dataloader(args, train_scene_list, is_weighting, False)
+    val_dataset, val_dataloader = get_dataloader(args, val_scene_list, is_weighting, is_wholescene)
     dataloader = {
         "train": train_dataloader,
         "val": val_dataloader
@@ -114,7 +120,8 @@ if __name__ == '__main__':
     parser.add_argument('--wd', type=float, help='weight decay', default=0)
     parser.add_argument('--bn', type=bool, help='batch norm', default=True)
     parser.add_argument("--debug", action="store_true")
-    parser.add_argument("--wholescene", action="store_true", help="flag for whether the evaluation is on the whole scene or on a single chunk")
+    parser.add_argument("--weighting", action="store_true", help="weight the classes")
+    parser.add_argument("--wholescene", action="store_true", help="evaluate on the whole scene or on a single chunk")
     args = parser.parse_args()
 
     # setting

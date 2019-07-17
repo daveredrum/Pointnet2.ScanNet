@@ -8,10 +8,10 @@ sys.path.append(".")
 from lib.config import CONF
 
 class ScannetDataset():
-    def __init__(self, scene_list, npoints=8192, is_train=True):
+    def __init__(self, scene_list, npoints=8192, is_weighting=True):
         self.scene_list = scene_list
         self.npoints = npoints
-        self.is_train = is_train
+        self.is_weighting = is_weighting
         self._load_scene_file()
 
     def _load_scene_file(self):
@@ -22,7 +22,7 @@ class ScannetDataset():
             self.scene_points_list.append(scene_data[:, :6])
             self.semantic_labels_list.append(scene_data[:, 7])
 
-        if self.is_train:
+        if self.is_weighting:
             labelweights = np.zeros(21)
             for seg in self.semantic_labels_list:
                 tmp,_ = np.histogram(seg,range(22))
@@ -82,10 +82,10 @@ class ScannetDataset():
         return len(self.scene_points_list)
 
 class ScannetDatasetWholeScene():
-    def __init__(self, scene_list, npoints=8192, is_train=True):
+    def __init__(self, scene_list, npoints=8192, is_weighting=True):
         self.scene_list = scene_list
         self.npoints = npoints
-        self.is_train = is_train
+        self.is_weighting = is_weighting
         self._load_scene_file()
 
     def _load_scene_file(self):
@@ -96,7 +96,7 @@ class ScannetDatasetWholeScene():
             self.scene_points_list.append(scene_data[:, :6])
             self.semantic_labels_list.append(scene_data[:, 7])
 
-        if self.is_train:
+        if self.is_weighting:
             labelweights = np.zeros(21)
             for seg in self.semantic_labels_list:
                 tmp,_ = np.histogram(seg,range(22))
