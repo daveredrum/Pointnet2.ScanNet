@@ -152,7 +152,7 @@ def visualize(args, preds):
     output_pc.write(os.path.join(output_root, "{}.ply".format(args.scene_id)))
 
 
-def get_scene_list(args, path):
+def get_scene_list(args):
     scene_list = []
     if args.scene_id:
         scene_list.append(args.scene_id)
