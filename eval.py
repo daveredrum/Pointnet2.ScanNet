@@ -39,7 +39,20 @@ def forward(args, model, coords, feats):
 
     return outputs
 
+def filter_points(coords, preds, targets, weights):
+    assert coords.shape[0] == preds.shape[0] == targets.shape[0] == weights.shape[0]
+    coord_hash = [hash(str(coords[point_idx][0]) + str(coords[point_idx][1]) + str(coords[point_idx][2])) for point_idx in range(coords.shape[0])]
+    _, coord_ids = np.unique(np.array(coord_hash), return_index=True)
+    coord_filtered, pred_filtered, target_filtered, weight_filtered = coords[coord_ids], preds[coord_ids], targets[coord_ids], weights[coord_ids]
+
+    return coord_filtered, pred_filtered, target_filtered, weight_filtered
+
 def compute_acc(coords, preds, targets, weights):
+    coords, preds, targets, weights = filter_points(coords, preds, targets, weights)
+    seen_classes = np.unique(targets)
+    mask = np.zeros(NUM_CLASSES)
+    mask[seen_classes] = 1
+
     total_correct = 0
     total_seen = 0
     total_seen_class = [0 for _ in range(NUM_CLASSES)]
@@ -53,26 +66,25 @@ def compute_acc(coords, preds, targets, weights):
     labelweights = np.zeros(NUM_CLASSES)
     labelweights_vox = np.zeros(NUM_CLASSES)
 
-    correct = np.sum(preds == targets) # evaluate only on 20 categories but not unknown
+    correct = np.sum((preds == targets) & (targets > 0)) # evaluate only on 20 categories but not unknown
     total_correct += correct
     total_seen += np.sum(targets>0)
     tmp,_ = np.histogram(targets,range(22))
     labelweights += tmp
-    for l in range(NUM_CLASSES):
+    for l in seen_classes:
         if l == 0: continue
         total_seen_class[l] += np.sum(targets==l)
         total_correct_class[l] += np.sum((preds==l) & (targets==l))
 
-    for b in range(coords.shape[0]):
-        _, uvlabel, _ = point_cloud_label_to_surface_voxel_label_fast(coords[b,weights[b,:]>0,:], np.concatenate((np.expand_dims(targets[b,weights[b,:]>0],1),np.expand_dims(preds[b,weights[b,:]>0],1)),axis=1), res=0.02)
-        total_correct_vox += np.sum((uvlabel[:,0]==uvlabel[:,1])&(uvlabel[:,0]>0))
-        total_seen_vox += np.sum(uvlabel[:,0]>0)
-        tmp,_ = np.histogram(uvlabel[:,0],range(22))
-        labelweights_vox += tmp
-        for l in range(NUM_CLASSES):
-            if l == 0: continue
-            total_seen_class_vox[l] += np.sum(uvlabel[:,0]==l)
-            total_correct_class_vox[l] += np.sum((uvlabel[:,0]==l) & (uvlabel[:,1]==l))
+    _, uvlabel, _ = point_cloud_label_to_surface_voxel_label_fast(coords, np.concatenate((np.expand_dims(targets,1),np.expand_dims(preds,1)),axis=1), res=0.02)
+    total_correct_vox += np.sum((uvlabel[:,0]==uvlabel[:,1])&(uvlabel[:,0]>0))
+    total_seen_vox += np.sum(uvlabel[:,0]>0)
+    tmp,_ = np.histogram(uvlabel[:,0],range(22))
+    labelweights_vox += tmp
+    for l in seen_classes:
+        if l == 0: continue
+        total_seen_class_vox[l] += np.sum(uvlabel[:,0]==l)
+        total_correct_class_vox[l] += np.sum((uvlabel[:,0]==l) & (uvlabel[:,1]==l))
 
     pointacc = total_correct / float(total_seen)
     voxacc = total_correct_vox / float(total_seen_vox)
@@ -83,31 +95,40 @@ def compute_acc(coords, preds, targets, weights):
     caliweights = labelweights_vox
     voxcaliacc = np.average(np.array(total_correct_class_vox[1:])/(np.array(total_seen_class_vox[1:],dtype=np.float)+1e-6),weights=caliweights)
 
-    pointacc_per_class = np.array([total_correct_class[l]/(total_seen_class[l] + 1e-8) for l in range(NUM_CLASSES)])
-    voxacc_per_class = np.array([total_seen_class_vox[l]/(total_seen_class_vox[l] + 1e-8) for l in range(NUM_CLASSES)])
+    pointacc_per_class = np.zeros(NUM_CLASSES)
+    voxacc_per_class = np.zeros(NUM_CLASSES)
+    for l in seen_classes:
+        if l == 0: continue
+        pointacc_per_class[l] = total_correct_class[l]/(total_seen_class[l] + 1e-8)
+        voxacc_per_class[l] = total_correct_class_vox[l]/(total_seen_class_vox[l] + 1e-8)
 
-    return pointacc, pointacc_per_class, voxacc, voxacc_per_class, voxcaliacc
+    return pointacc, pointacc_per_class, voxacc, voxacc_per_class, voxcaliacc, mask
 
 def compute_miou(coords, preds, targets, weights):
-    pointmiou = np.zeros((coords.shape[0], NUM_CLASSES))
-    voxmiou = np.zeros((coords.shape[0], NUM_CLASSES))
-    for b in range(coords.shape[0]):
-        uvidx, uvlabel, _ = point_cloud_label_to_surface_voxel_label_fast(coords[b,weights[b,:]>0,:], np.concatenate((np.expand_dims(targets[b,weights[b,:]>0],1),np.expand_dims(preds[b,weights[b,:]>0],1)),axis=1), res=0.02)
-        for l in range(NUM_CLASSES):
-            if l == 0: continue
-            target_label = np.arange(targets[b].shape[0])[targets[b]==l]
-            pred_label = np.arange(preds[b].shape[0])[preds[b]==l]
-            num_intersection_label = np.intersect1d(pred_label, target_label).shape[0]
-            num_union_label = np.union1d(pred_label, target_label).shape[0]
-            pointmiou[b, l] = num_intersection_label / (num_union_label + 1e-8)
+    coords, preds, targets, weights = filter_points(coords, preds, targets, weights)
+    seen_classes = np.unique(targets)
+    mask = np.zeros(NUM_CLASSES)
+    mask[seen_classes] = 1
 
-            target_label_vox = uvidx[(uvlabel[:, 0] == l)]
-            pred_label_vox = uvidx[(uvlabel[:, 1] == l)]
-            num_intersection_label_vox = np.intersect1d(pred_label_vox, target_label_vox).shape[0]
-            num_union_label_vox = np.union1d(pred_label_vox, target_label_vox).shape[0]
-            voxmiou[b, l] = num_intersection_label_vox / (num_union_label_vox + 1e-8)
+    pointmiou = np.zeros(NUM_CLASSES)
+    voxmiou = np.zeros(NUM_CLASSES)
 
-    return np.mean(pointmiou, axis=0), np.mean(voxmiou, axis=0)
+    uvidx, uvlabel, _ = point_cloud_label_to_surface_voxel_label_fast(coords, np.concatenate((np.expand_dims(targets,1),np.expand_dims(preds,1)),axis=1), res=0.02)
+    for l in seen_classes:
+        if l == 0: continue
+        target_label = np.arange(targets.shape[0])[targets==l]
+        pred_label = np.arange(preds.shape[0])[preds==l]
+        num_intersection_label = np.intersect1d(pred_label, target_label).shape[0]
+        num_union_label = np.union1d(pred_label, target_label).shape[0]
+        pointmiou[l] = num_intersection_label / (num_union_label + 1e-8)
+
+        target_label_vox = uvidx[(uvlabel[:, 0] == l)]
+        pred_label_vox = uvidx[(uvlabel[:, 1] == l)]
+        num_intersection_label_vox = np.intersect1d(pred_label_vox, target_label_vox).shape[0]
+        num_union_label_vox = np.union1d(pred_label_vox, target_label_vox).shape[0]
+        voxmiou[l] = num_intersection_label_vox / (num_union_label_vox + 1e-8)
+
+    return pointmiou, voxmiou, mask
 
 def eval_one_batch(args, model, data):
     # unpack
@@ -118,14 +139,15 @@ def eval_one_batch(args, model, data):
     preds = forward(args, model, coords, feats)
 
     # eval
-    coords = coords.squeeze(0).cpu().numpy()     # (CK, N, C)
-    preds = preds.squeeze(0).cpu().numpy()       # (CK, N, C)
-    targets = targets.squeeze(0).cpu().numpy()   # (CK, N, C)
-    weights = weights.squeeze(0).cpu().numpy()   # (CK, N, C)
-    pointacc, pointacc_per_class, voxacc, voxacc_per_class, voxcaliacc = compute_acc(coords, preds, targets, weights)
-    pointmiou, voxmiou = compute_miou(coords, preds, targets, weights)
+    coords = coords.squeeze(0).view(-1, 3).cpu().numpy()     # (CK*N, C)
+    preds = preds.squeeze(0).view(-1).cpu().numpy()          # (CK*N, C)
+    targets = targets.squeeze(0).view(-1).cpu().numpy()      # (CK*N, C)
+    weights = weights.squeeze(0).view(-1).cpu().numpy()      # (CK*N, C)
+    pointacc, pointacc_per_class, voxacc, voxacc_per_class, voxcaliacc, acc_mask = compute_acc(coords, preds, targets, weights)
+    pointmiou, voxmiou, miou_mask = compute_miou(coords, preds, targets, weights)
+    assert acc_mask.all() == miou_mask.all()
 
-    return pointacc, pointacc_per_class, voxacc, voxacc_per_class, voxcaliacc, pointmiou, voxmiou
+    return pointacc, pointacc_per_class, voxacc, voxacc_per_class, voxcaliacc, pointmiou, voxmiou, acc_mask
 
 
 def eval_wholescene(args, model, dataloader):
@@ -137,11 +159,12 @@ def eval_wholescene(args, model, dataloader):
     voxcaliacc_list = []
     pointmiou_per_class_array = np.zeros((len(dataloader), NUM_CLASSES-1))
     voxmiou_per_class_array = np.zeros((len(dataloader), NUM_CLASSES-1))
+    masks = np.zeros((len(dataloader), NUM_CLASSES-1))
 
     # iter
     for load_idx, data in enumerate(dataloader):
         # feed
-        pointacc, pointacc_per_class, voxacc, voxacc_per_class, voxcaliacc, pointmiou, voxmiou = eval_one_batch(args, model, data)
+        pointacc, pointacc_per_class, voxacc, voxacc_per_class, voxcaliacc, pointmiou, voxmiou, mask = eval_one_batch(args, model, data)
 
         # dump
         pointacc_list.append(pointacc)
@@ -151,8 +174,9 @@ def eval_wholescene(args, model, dataloader):
         voxcaliacc_list.append(voxcaliacc)
         pointmiou_per_class_array[load_idx] = pointmiou[1:]
         voxmiou_per_class_array[load_idx] = voxmiou[1:]
+        masks[load_idx] = mask[1:]
 
-    return pointacc_list, pointacc_per_class_array, voxacc_list, voxacc_per_class_array, voxcaliacc_list, pointmiou_per_class_array, voxmiou_per_class_array
+    return pointacc_list, pointacc_per_class_array, voxacc_list, voxacc_per_class_array, voxcaliacc_list, pointmiou_per_class_array, voxmiou_per_class_array, masks
 
 def evaluate(args):
     # prepare data
@@ -171,20 +195,20 @@ def evaluate(args):
 
     # eval
     print("evaluating...")
-    pointacc_list, pointacc_per_class_array, voxacc_list, voxacc_per_class_array, voxcaliacc_list, pointmiou_per_class_array, voxmiou_per_class_array = eval_wholescene(args, model, dataloader)
+    pointacc_list, pointacc_per_class_array, voxacc_list, voxacc_per_class_array, voxcaliacc_list, pointmiou_per_class_array, voxmiou_per_class_array, masks = eval_wholescene(args, model, dataloader)
     
     avg_pointacc = np.mean(pointacc_list)
-    avg_pointacc_per_class = np.mean(pointacc_per_class_array, axis=0)
+    avg_pointacc_per_class = np.mean(pointacc_per_class_array * masks, axis=0)
 
     avg_voxacc = np.mean(voxacc_list)
-    avg_voxacc_per_class = np.mean(voxacc_per_class_array, axis=0)
+    avg_voxacc_per_class = np.mean(voxacc_per_class_array * masks, axis=0)
 
     avg_voxcaliacc = np.mean(voxcaliacc_list)
     
-    avg_pointmiou_per_class = np.mean(pointmiou_per_class_array, axis=0)
+    avg_pointmiou_per_class = np.mean(pointmiou_per_class_array * masks, axis=0)
     avg_pointmiou = np.mean(avg_pointmiou_per_class)
 
-    avg_voxmiou_per_class = np.mean(voxmiou_per_class_array, axis=0)
+    avg_voxmiou_per_class = np.mean(voxmiou_per_class_array * masks, axis=0)
     avg_voxmiou = np.mean(avg_voxmiou_per_class)
 
     # report

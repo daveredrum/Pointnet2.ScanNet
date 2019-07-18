@@ -111,11 +111,10 @@ class ScannetDatasetWholeScene():
         start = time.time()
         point_set_ini = self.scene_points_list[index]
         semantic_seg_ini = self.semantic_labels_list[index].astype(np.int32)
-        coordmax = np.max(point_set_ini,axis=0)[:3]
-        coordmin = np.min(point_set_ini,axis=0)[:3]
+        coordmax = point_set_ini[:, :3].max(axis=0)
+        coordmin = point_set_ini[:, :3].min(axis=0)
         xlength = 1.5
         ylength = 1.5
-        zlength = 3
         nsubvolume_x = np.ceil((coordmax[0]-coordmin[0])/xlength).astype(np.int32)
         nsubvolume_y = np.ceil((coordmax[1]-coordmin[1])/ylength).astype(np.int32)
         point_sets = list()
@@ -125,11 +124,11 @@ class ScannetDatasetWholeScene():
         for i in range(nsubvolume_x):
             for j in range(nsubvolume_y):
                 curmin = coordmin+[i*xlength, j*ylength, 0]
-                curmax = coordmin+[(i+1)*xlength, (j+1)*ylength, zlength]
+                curmax = coordmin+[(i+1)*xlength, (j+1)*ylength, coordmax[2]-coordmin[2]]
                 mask = np.all((point_set_ini[:, :3]>=curmin)*(point_set_ini[:, :3]<=curmax), axis=1)
                 cur_point_set = point_set_ini[mask,:]
                 cur_semantic_seg = semantic_seg_ini[mask]
-                if sum(mask) == 0:
+                if len(cur_semantic_seg) == 0:
                     continue
 
                 choice = np.random.choice(len(cur_semantic_seg), self.npoints, replace=True)

@@ -76,19 +76,8 @@ def train(args):
         val_scene_list = get_scene_list(CONF.SCANNETV2_VAL)
 
     # dataloader
-
-    if args.weighting:
-        is_weighting = True
-    else:
-        is_weighting = False
-
-    if args.wholescene:
-        is_wholescene = True
-    else:
-        is_wholescene = False
-
-    train_dataset, train_dataloader = get_dataloader(args, train_scene_list, is_weighting, False)
-    val_dataset, val_dataloader = get_dataloader(args, val_scene_list, is_weighting, is_wholescene)
+    train_dataset, train_dataloader = get_dataloader(args, train_scene_list, args.weighting, args.wholescene)
+    val_dataset, val_dataloader = get_dataloader(args, val_scene_list, args.weighting, args.wholescene)
     dataloader = {
         "train": train_dataloader,
         "val": val_dataloader
@@ -99,9 +88,10 @@ def train(args):
 
     print("initializing...")
     stamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    if args.tag: stamp += "_"+args.tag.upper()
     root = os.path.join(CONF.OUTPUT_ROOT, stamp)
     os.makedirs(root, exist_ok=True)
-    solver, num_params = get_solver(args, dataloader, stamp, weight, is_wholescene)
+    solver, num_params = get_solver(args, dataloader, stamp, weight, args.wholescene)
     
     print("\n[info]")
     print("Train examples: {}".format(train_examples))
@@ -112,6 +102,7 @@ def train(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('--tag', type=str, help="tag for the training, e.g. cuda_wl", default="cuda_wl")
     parser.add_argument('--gpu', type=str, help='gpu', default='0')
     parser.add_argument('--batch_size', type=int, help='batch size', default=1)
     parser.add_argument('--epoch', type=int, help='number of epochs', default=10)
@@ -121,7 +112,7 @@ if __name__ == '__main__':
     parser.add_argument('--bn', type=bool, help='batch norm', default=True)
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--weighting", action="store_true", help="weight the classes")
-    parser.add_argument("--wholescene", action="store_true", help="evaluate on the whole scene or on a single chunk")
+    parser.add_argument("--wholescene", action="store_true", help="on the whole scene or on a random chunk")
     args = parser.parse_args()
 
     # setting

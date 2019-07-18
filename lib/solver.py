@@ -214,9 +214,9 @@ class Solver():
 
             # forward
             start_forward = time.time()
-            preds = self._forward(coords, feats, False)
+            preds = self._forward(coords, feats, self.is_wholescene)
             self._compute_loss(preds, semantic_segs, sample_weights)
-            self._eval(coords, preds, semantic_segs, sample_weights, False)
+            self._eval(coords, preds, semantic_segs, sample_weights, self.is_wholescene)
             self.log[phase][epoch_id]["forward"].append(time.time() - start_forward)
 
             # backward
@@ -320,27 +320,25 @@ class Solver():
 
     def _eval(self, coords, preds, targets, weights, is_wholescene):
         if is_wholescene:
-            coords = coords.squeeze(0).cpu().numpy()               # (CK, N, C)
-            preds = preds.max(3)[1].squeeze(0).cpu().numpy()       # (CK, N, C)
-            targets = targets.squeeze(0).cpu().numpy()             # (CK, N, C)
-            weights = weights.squeeze(0).cpu().numpy()             # (CK, N, C)
+            coords = coords.squeeze(0).view(-1, 3).cpu().numpy()            # (CK * N, 3)
+            preds = preds.max(3)[1].squeeze(0).view(-1).cpu().numpy()       # (CK * N)
+            targets = targets.squeeze(0).view(-1).cpu().numpy()             # (CK * N)
+            weights = weights.squeeze(0).view(-1).cpu().numpy()             # (CK * N)
         else:
-            coords = coords.cpu().numpy()               # (B, N, C)
-            preds = preds.max(2)[1].cpu().numpy()       # (B, N, C)
-            targets = targets.cpu().numpy()             # (B, N, C)
-            weights = weights.cpu().numpy()             # (B, N, C)
+            coords = coords.view(-1, 3).cpu().numpy()            # (B * N, 3)
+            preds = preds.max(2)[1].view(-1).cpu().numpy()       # (B * N)
+            targets = targets.view(-1).cpu().numpy()             # (B * N)
+            weights = weights.view(-1).cpu().numpy()             # (B * N)
 
-        pointacc, pointacc_per_class, voxacc, voxacc_per_class, _ = compute_acc(coords, preds, targets, weights)
-        valid_pointacc_per_class = [e for e in pointacc_per_class if e != 0]
-        valid_voxacc_per_class = [e for e in voxacc_per_class if e != 0]
-        pointmiou, voxmiou = compute_miou(coords, preds, targets, weights)
+        pointacc, pointacc_per_class, voxacc, voxacc_per_class, _, acc_mask = compute_acc(coords, preds, targets, weights)
+        pointmiou, voxmiou, miou_mask = compute_miou(coords, preds, targets, weights)
         
         self._running_log["point_acc"] = pointacc
-        self._running_log["point_acc_per_class"] = np.mean(valid_pointacc_per_class) if len(valid_pointacc_per_class) != 0 else 0
+        self._running_log["point_acc_per_class"] = np.mean(pointacc_per_class[1:] * acc_mask[1:])
         self._running_log["voxel_acc"] = voxacc
-        self._running_log["voxel_acc_per_class"] = np.mean(valid_voxacc_per_class) if len(valid_voxacc_per_class) != 0 else 0
-        self._running_log["point_miou"] = pointmiou
-        self._running_log["voxel_miou"] = voxmiou
+        self._running_log["voxel_acc_per_class"] = np.mean(voxacc_per_class[1:] * acc_mask[1:])
+        self._running_log["point_miou"] = np.mean(pointmiou[1:] * miou_mask[1:])
+        self._running_log["voxel_miou"] = np.mean(voxmiou[1:] * miou_mask[1:])
 
     def _dump_log(self, epoch_id):
         # loss
