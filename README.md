@@ -27,16 +27,25 @@ python preprocessing/collect_scannet_scenes.py
 ```
 
 ### train
+Train the PointNet++ semantic segmentation model on ScanNet scenes
 ```shell
-python train.py --batch_size 32 --epoch 500 --lr 1e-3
+python train.py --batch_size 32 --epoch 500 --lr 1e-3 --verbose 10 --weighting
 ```
 The trained models and logs will be saved in `outputs/<time_stamp>/`
+> Note: please refer to [train.py](https://github.com/daveredrum/Pointnet2.ScanNet/blob/master/train.py) for more training settings
 
 ### eval
 Evaluate the trained models and report the segmentation performance in point accuracy, voxel accuracy and calibrated voxel accuracy
 ```shell
 python eval.py --batch_size 32 --folder <time_stamp>
 ```
+
+### Vis
+Visualize the semantic segmentation results on points in a given scene
+```shell
+python visualize.py --batch_size 32 --folder <time_stamp> --scene_id <scene_id>
+```
+The generated `<scene_id>.ply` is stored in `outputs/<time_stamp>/preds`
 
 ## Acknowledgement
 * [charlesq34/pointnet2](https://github.com/charlesq34/pointnet2): Paper author and official code repo.
