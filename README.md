@@ -16,7 +16,7 @@ cd pointnet2
 python setup.py install
 ```
 
-### Setup
+### Configure
 Change the path configurations for the ScanNet data in `lib/config.py`
 
 ## Usage
