@@ -58,7 +58,7 @@ BEST_REPORT_TEMPLATE = """
 """
 
 class Solver():
-    def __init__(self, model, dataloader, criterion, optimizer, batch_size, stamp, is_wholescene=True):
+    def __init__(self, model, dataloader, criterion, optimizer, batch_size, stamp, is_wholescene=True, decay_step=10, decay_factor=0.7):
         self.epoch = 0                    # set in __call__
         self.verbose = 0                  # set in __call__
         
@@ -69,7 +69,7 @@ class Solver():
         self.batch_size = batch_size
         self.stamp = stamp
         self.is_wholescene = is_wholescene
-        self.scheduler = StepLR(optimizer, step_size=100, gamma=0.7)
+        self.scheduler = StepLR(optimizer, step_size=decay_step, gamma=decay_factor)
         self.best = {
             "epoch": 0,
             "loss": float("inf"),
@@ -334,11 +334,11 @@ class Solver():
         pointmiou, voxmiou, miou_mask = compute_miou(coords, preds, targets, weights)
         
         self._running_log["point_acc"] = pointacc
-        self._running_log["point_acc_per_class"] = np.mean(pointacc_per_class[1:] * acc_mask[1:])
+        self._running_log["point_acc_per_class"] = np.mean(pointacc_per_class * acc_mask)
         self._running_log["voxel_acc"] = voxacc
-        self._running_log["voxel_acc_per_class"] = np.mean(voxacc_per_class[1:] * acc_mask[1:])
-        self._running_log["point_miou"] = np.mean(pointmiou[1:] * miou_mask[1:])
-        self._running_log["voxel_miou"] = np.mean(voxmiou[1:] * miou_mask[1:])
+        self._running_log["voxel_acc_per_class"] = np.mean(voxacc_per_class * acc_mask)
+        self._running_log["point_miou"] = np.mean(pointmiou * miou_mask)
+        self._running_log["voxel_miou"] = np.mean(voxmiou * miou_mask)
 
     def _dump_log(self, epoch_id):
         # loss

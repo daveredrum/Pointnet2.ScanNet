@@ -14,15 +14,13 @@ sys.path.append(".")
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pointnet2/'))
 from lib.config import CONF
 
-# META
-NYUCLASSES = ['unannotated', 'wall', 'floor', 'chair', 'table', 'desk', 'bed', 'bookshelf', 'sofa', 'sink', 'bathtub', 'toilet', 'curtain', 'counter', 'door', 'window', 'shower curtain', 'refrigerator', 'picture', 'cabinet', 'otherfurniture']
-NUM_CLASSES = len(NYUCLASSES)
-
 def get_scene_list(path):
     scene_list = []
     with open(path) as f:
         for scene_id in f.readlines():
             scene_list.append(scene_id.strip())
+
+    scene_list = sorted(scene_list, key=lambda x: int(x.split("_")[0][5:]))
 
     return scene_list
 
@@ -50,55 +48,51 @@ def filter_points(coords, preds, targets, weights):
 def compute_acc(coords, preds, targets, weights):
     coords, preds, targets, weights = filter_points(coords, preds, targets, weights)
     seen_classes = np.unique(targets)
-    mask = np.zeros(NUM_CLASSES)
+    mask = np.zeros(CONF.NUM_CLASSES)
     mask[seen_classes] = 1
 
     total_correct = 0
     total_seen = 0
-    total_seen_class = [0 for _ in range(NUM_CLASSES)]
-    total_correct_class = [0 for _ in range(NUM_CLASSES)]
+    total_seen_class = [0 for _ in range(CONF.NUM_CLASSES)]
+    total_correct_class = [0 for _ in range(CONF.NUM_CLASSES)]
 
     total_correct_vox = 0
     total_seen_vox = 0
-    total_seen_class_vox = [0 for _ in range(NUM_CLASSES)]
-    total_correct_class_vox = [0 for _ in range(NUM_CLASSES)]
+    total_seen_class_vox = [0 for _ in range(CONF.NUM_CLASSES)]
+    total_correct_class_vox = [0 for _ in range(CONF.NUM_CLASSES)]
 
-    labelweights = np.zeros(NUM_CLASSES)
-    labelweights_vox = np.zeros(NUM_CLASSES)
+    labelweights = np.zeros(CONF.NUM_CLASSES)
+    labelweights_vox = np.zeros(CONF.NUM_CLASSES)
 
-    correct = np.sum((preds == targets) & (targets > 0)) # evaluate only on 20 categories but not unknown
+    correct = np.sum(preds == targets) # evaluate only on 20 categories but not unknown
     total_correct += correct
-    total_seen += np.sum(targets>0)
-    tmp,_ = np.histogram(targets,range(22))
+    total_seen += targets.shape[0]
+    tmp,_ = np.histogram(targets,range(CONF.NUM_CLASSES+1))
     labelweights += tmp
     for l in seen_classes:
-        if l == 0: continue
         total_seen_class[l] += np.sum(targets==l)
         total_correct_class[l] += np.sum((preds==l) & (targets==l))
 
     _, uvlabel, _ = point_cloud_label_to_surface_voxel_label_fast(coords, np.concatenate((np.expand_dims(targets,1),np.expand_dims(preds,1)),axis=1), res=0.02)
-    total_correct_vox += np.sum((uvlabel[:,0]==uvlabel[:,1])&(uvlabel[:,0]>0))
-    total_seen_vox += np.sum(uvlabel[:,0]>0)
-    tmp,_ = np.histogram(uvlabel[:,0],range(22))
+    total_correct_vox += np.sum(uvlabel[:,0]==uvlabel[:,1])
+    total_seen_vox += uvlabel[:,0].shape[0]
+    tmp,_ = np.histogram(uvlabel[:,0],range(CONF.NUM_CLASSES+1))
     labelweights_vox += tmp
     for l in seen_classes:
-        if l == 0: continue
         total_seen_class_vox[l] += np.sum(uvlabel[:,0]==l)
         total_correct_class_vox[l] += np.sum((uvlabel[:,0]==l) & (uvlabel[:,1]==l))
 
     pointacc = total_correct / float(total_seen)
     voxacc = total_correct_vox / float(total_seen_vox)
 
-    labelweights = labelweights[1:].astype(np.float32)/np.sum(labelweights[1:].astype(np.float32))
-    labelweights_vox = labelweights_vox[1:].astype(np.float32)/np.sum(labelweights_vox[1:].astype(np.float32))
-    # caliweights = np.array([0.388,0.357,0.038,0.033,0.017,0.02,0.016,0.025,0.002,0.002,0.002,0.007,0.006,0.022,0.004,0.0004,0.003,0.002,0.024,0.029])
+    labelweights = labelweights.astype(np.float32)/np.sum(labelweights.astype(np.float32))
+    labelweights_vox = labelweights_vox.astype(np.float32)/np.sum(labelweights_vox.astype(np.float32))
     caliweights = labelweights_vox
-    voxcaliacc = np.average(np.array(total_correct_class_vox[1:])/(np.array(total_seen_class_vox[1:],dtype=np.float)+1e-6),weights=caliweights)
+    voxcaliacc = np.average(np.array(total_correct_class_vox)/(np.array(total_seen_class_vox,dtype=np.float)+1e-8),weights=caliweights)
 
-    pointacc_per_class = np.zeros(NUM_CLASSES)
-    voxacc_per_class = np.zeros(NUM_CLASSES)
+    pointacc_per_class = np.zeros(CONF.NUM_CLASSES)
+    voxacc_per_class = np.zeros(CONF.NUM_CLASSES)
     for l in seen_classes:
-        if l == 0: continue
         pointacc_per_class[l] = total_correct_class[l]/(total_seen_class[l] + 1e-8)
         voxacc_per_class[l] = total_correct_class_vox[l]/(total_seen_class_vox[l] + 1e-8)
 
@@ -107,15 +101,14 @@ def compute_acc(coords, preds, targets, weights):
 def compute_miou(coords, preds, targets, weights):
     coords, preds, targets, weights = filter_points(coords, preds, targets, weights)
     seen_classes = np.unique(targets)
-    mask = np.zeros(NUM_CLASSES)
+    mask = np.zeros(CONF.NUM_CLASSES)
     mask[seen_classes] = 1
 
-    pointmiou = np.zeros(NUM_CLASSES)
-    voxmiou = np.zeros(NUM_CLASSES)
+    pointmiou = np.zeros(CONF.NUM_CLASSES)
+    voxmiou = np.zeros(CONF.NUM_CLASSES)
 
     uvidx, uvlabel, _ = point_cloud_label_to_surface_voxel_label_fast(coords, np.concatenate((np.expand_dims(targets,1),np.expand_dims(preds,1)),axis=1), res=0.02)
     for l in seen_classes:
-        if l == 0: continue
         target_label = np.arange(targets.shape[0])[targets==l]
         pred_label = np.arange(preds.shape[0])[preds==l]
         num_intersection_label = np.intersect1d(pred_label, target_label).shape[0]
@@ -153,13 +146,13 @@ def eval_one_batch(args, model, data):
 def eval_wholescene(args, model, dataloader):
     # init
     pointacc_list = []
-    pointacc_per_class_array = np.zeros((len(dataloader), NUM_CLASSES-1))
+    pointacc_per_class_array = np.zeros((len(dataloader), CONF.NUM_CLASSES))
     voxacc_list = []
-    voxacc_per_class_array = np.zeros((len(dataloader), NUM_CLASSES-1))
+    voxacc_per_class_array = np.zeros((len(dataloader), CONF.NUM_CLASSES))
     voxcaliacc_list = []
-    pointmiou_per_class_array = np.zeros((len(dataloader), NUM_CLASSES-1))
-    voxmiou_per_class_array = np.zeros((len(dataloader), NUM_CLASSES-1))
-    masks = np.zeros((len(dataloader), NUM_CLASSES-1))
+    pointmiou_per_class_array = np.zeros((len(dataloader), CONF.NUM_CLASSES))
+    voxmiou_per_class_array = np.zeros((len(dataloader), CONF.NUM_CLASSES))
+    masks = np.zeros((len(dataloader), CONF.NUM_CLASSES))
 
     # iter
     for load_idx, data in enumerate(dataloader):
@@ -168,13 +161,13 @@ def eval_wholescene(args, model, dataloader):
 
         # dump
         pointacc_list.append(pointacc)
-        pointacc_per_class_array[load_idx] = pointacc_per_class[1:]
+        pointacc_per_class_array[load_idx] = pointacc_per_class
         voxacc_list.append(voxacc)
-        voxacc_per_class_array[load_idx] = voxacc_per_class[1:]
+        voxacc_per_class_array[load_idx] = voxacc_per_class
         voxcaliacc_list.append(voxcaliacc)
-        pointmiou_per_class_array[load_idx] = pointmiou[1:]
-        voxmiou_per_class_array[load_idx] = voxmiou[1:]
-        masks[load_idx] = mask[1:]
+        pointmiou_per_class_array[load_idx] = pointmiou
+        voxmiou_per_class_array[load_idx] = voxmiou
+        masks[load_idx] = mask
 
     return pointacc_list, pointacc_per_class_array, voxacc_list, voxacc_per_class_array, voxcaliacc_list, pointmiou_per_class_array, voxmiou_per_class_array, masks
 
@@ -214,18 +207,17 @@ def evaluate(args):
     # report
     print()
     print("Point accuracy: {}".format(avg_pointacc))
-    print("Point accuracy per class: {}".format(np.mean([e for e in avg_pointacc_per_class if e != 0])))
+    print("Point accuracy per class: {}".format(np.mean(avg_pointacc_per_class)))
     print("Voxel accuracy: {}".format(avg_voxacc))
-    print("Voxel accuracy per class: {}".format(np.mean([e for e in avg_voxacc_per_class if e != 0])))
+    print("Voxel accuracy per class: {}".format(np.mean(avg_voxacc_per_class)))
     print("Calibrated voxel accuracy: {}".format(avg_voxcaliacc))
     print("Point miou: {}".format(avg_pointmiou))
     print("Voxel miou: {}".format(avg_voxmiou))
     print()
 
     print("Point acc/voxel acc/point miou/voxel miou per class:")
-    for l in range(NUM_CLASSES):
-        if l == 0: continue
-        print("Class {}: {}/{}/{}/{}".format(NYUCLASSES[l], avg_pointacc_per_class[l-1], avg_voxacc_per_class[l-1], avg_pointmiou_per_class[l-1], avg_voxmiou_per_class[l-1]))
+    for l in range(CONF.NUM_CLASSES):
+        print("Class {}: {}/{}/{}/{}".format(CONF.NYUCLASSES[l], avg_pointacc_per_class[l], avg_voxacc_per_class[l], avg_pointmiou_per_class[l], avg_voxmiou_per_class[l]))
 
 
 if __name__ == "__main__":

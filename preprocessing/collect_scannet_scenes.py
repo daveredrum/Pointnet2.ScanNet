@@ -52,19 +52,17 @@ def collect_one_scene_data_label(scene_name, out_filename):
     instance_labels_list = []
     semantic_labels_list = []
     for i in range(len(instance_segids)):
-       segids = instance_segids[i]
-       pointids = []
-       for segid in segids:
-           pointids += segid_to_pointid[segid]
-       instance_points = points[np.array(pointids),:]
-       instance_points_list.append(instance_points)
-       instance_labels_list.append(np.ones((instance_points.shape[0], 1))*i)   
-       if labels[i] not in RAW2SCANNET:
-           label = 'unannotated'
-       else:
-           label = RAW2SCANNET[labels[i]]
-       label = CLASS_NAMES.index(label)
-       semantic_labels_list.append(np.ones((instance_points.shape[0], 1))*label)
+        segids = instance_segids[i]
+        pointids = []
+        for segid in segids:
+            pointids += segid_to_pointid[segid]
+        instance_points = points[np.array(pointids),:]
+        instance_points_list.append(instance_points)
+        instance_labels_list.append(np.ones((instance_points.shape[0], 1))*i)   
+        label = RAW2SCANNET[labels[i]]
+        label = CLASS_NAMES.index(label)
+        label = CLASS_NAMES.index(label)
+        semantic_labels_list.append(np.ones((instance_points.shape[0], 1))*label)
        
     # Refactor data format
     scene_points = np.concatenate(instance_points_list, 0)

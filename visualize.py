@@ -13,52 +13,6 @@ sys.path.append(".")
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pointnet2/'))
 from lib.config import CONF
 
-# color palette for nyu40 labels
-def create_color_palette():
-    return [
-       (0, 0, 0),
-       (174, 199, 232),		# wall
-       (152, 223, 138),		# floor
-       (31, 119, 180), 		# cabinet
-       (255, 187, 120),		# bed
-       (188, 189, 34), 		# chair
-       (140, 86, 75),  		# sofa
-       (255, 152, 150),		# table
-       (214, 39, 40),  		# door
-       (197, 176, 213),		# window
-       (148, 103, 189),		# bookshelf
-       (196, 156, 148),		# picture
-       (23, 190, 207), 		# counter
-       (178, 76, 76),  
-       (247, 182, 210),		# desk
-       (66, 188, 102), 
-       (219, 219, 141),		# curtain
-       (140, 57, 197), 
-       (202, 185, 52), 
-       (51, 176, 203), 
-       (200, 54, 131), 
-       (92, 193, 61),  
-       (78, 71, 183),  
-       (172, 114, 82), 
-       (255, 127, 14), 		# refrigerator
-       (91, 163, 138), 
-       (153, 98, 156), 
-       (140, 153, 101),
-       (158, 218, 229),		# shower curtain
-       (100, 125, 154),
-       (178, 127, 135),
-       (120, 185, 128),
-       (146, 111, 194),
-       (44, 160, 44),  		# toilet
-       (112, 128, 144),		# sink
-       (96, 207, 209), 
-       (227, 119, 194),		# bathtub
-       (213, 92, 176), 
-       (94, 106, 211), 
-       (82, 84, 163),  		# otherfurn
-       (100, 85, 144)
-    ]
-
 def forward(args, model, coords, feats):
     pred = []
     coord_chunk, feat_chunk = torch.split(coords.squeeze(0), args.batch_size, 0), torch.split(feats.squeeze(0), args.batch_size, 0)
@@ -74,7 +28,6 @@ def forward(args, model, coords, feats):
 
 def filter_points(coords, preds):
     assert coords.shape[0] == preds.shape[0]
-    palette = create_color_palette()
 
     coord_hash = [hash(str(coords[point_idx][0]) + str(coords[point_idx][1]) + str(coords[point_idx][2])) for point_idx in range(coords.shape[0])]
     _, coord_ids = np.unique(np.array(coord_hash), return_index=True)
@@ -86,9 +39,9 @@ def filter_points(coords, preds):
                 coord_filtered[point_idx][0],
                 coord_filtered[point_idx][1],
                 coord_filtered[point_idx][2],
-                palette[pred_filtered[point_idx]][0],
-                palette[pred_filtered[point_idx]][1],
-                palette[pred_filtered[point_idx]][2]
+                CONF.PALETTE[pred_filtered[point_idx]][0],
+                CONF.PALETTE[pred_filtered[point_idx]][1],
+                CONF.PALETTE[pred_filtered[point_idx]][2]
             ]
         )
     
@@ -172,7 +125,7 @@ def evaluate(args):
     print("loading model...")
     model_path = os.path.join(CONF.OUTPUT_ROOT, args.folder, "model.pth")
     Pointnet = importlib.import_module("pointnet2_msg_semseg")
-    model = Pointnet.get_model(num_classes=21).cuda()
+    model = Pointnet.get_model(num_classes=CONF.NUM_CLASSES).cuda()
     model.load_state_dict(torch.load(model_path))
     model.eval()
 

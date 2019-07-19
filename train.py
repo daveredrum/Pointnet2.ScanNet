@@ -37,11 +37,11 @@ def get_solver(args, dataloader, stamp, weight, is_wholescene):
     sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pointnet2/'))
     Pointnet = importlib.import_module("pointnet2_msg_semseg")
 
-    model = Pointnet.get_model(num_classes=21).cuda()
+    model = Pointnet.get_model(num_classes=CONF.NUM_CLASSES).cuda()
     num_params = get_num_params(model)
     criterion = WeightedCrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
-    solver = Solver(model, dataloader, criterion, optimizer, args.batch_size, stamp, is_wholescene)
+    solver = Solver(model, dataloader, criterion, optimizer, args.batch_size, stamp, is_wholescene, args.ds, args.df)
 
     return solver, num_params
 
@@ -110,6 +110,8 @@ if __name__ == '__main__':
     parser.add_argument('--lr', type=float, help='learning rate', default=5e-5)
     parser.add_argument('--wd', type=float, help='weight decay', default=0)
     parser.add_argument('--bn', type=bool, help='batch norm', default=True)
+    parser.add_argument('--ds', type=int, help='decay step', default=100)
+    parser.add_argument('--df', type=float, help='decay factor', default=0.7)
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--weighting", action="store_true", help="weight the classes")
     parser.add_argument("--wholescene", action="store_true", help="on the whole scene or on a random chunk")
