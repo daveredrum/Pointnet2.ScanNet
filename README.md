@@ -25,6 +25,12 @@ Parse the ScanNet data into `*.npy` files and save them in `preprocessing/scanne
 ```shell
 python preprocessing/collect_scannet_scenes.py
 ```
+#### Sanity check
+Don't forget to visualize the preprocessed scenes to check the consistency
+```shell
+python preprocessing/visualize_prep_scene.py --scene_id <scene_id>
+```
+The visualized `<scene_id>.ply` is stored in `preprocessing/label_point_clouds/`
 
 ### train
 Train the PointNet++ semantic segmentation model on ScanNet scenes
