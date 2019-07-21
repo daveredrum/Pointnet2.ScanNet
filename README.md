@@ -25,7 +25,7 @@ Parse the ScanNet data into `*.npy` files and save them in `preprocessing/scanne
 ```shell
 python preprocessing/collect_scannet_scenes.py
 ```
-#### Sanity check
+#### sanity check
 Don't forget to visualize the preprocessed scenes to check the consistency
 ```shell
 python preprocessing/visualize_prep_scene.py --scene_id <scene_id>
@@ -46,12 +46,23 @@ Evaluate the trained models and report the segmentation performance in point acc
 python eval.py --batch_size 32 --folder <time_stamp>
 ```
 
-### Vis
+### vis
 Visualize the semantic segmentation results on points in a given scene
 ```shell
 python visualize.py --batch_size 32 --folder <time_stamp> --scene_id <scene_id>
 ```
-The generated `<scene_id>.ply` is stored in `outputs/<time_stamp>/preds`
+The generated `<scene_id>.ply` is stored in `outputs/<time_stamp>/preds`. See the class palette [here](http://kaldir.vc.in.tum.de/scannet_benchmark/img/legend.jpg)
+
+## Performance
+The semantic segmentation results in percentage on the ScanNet train/val split in `data/`.
+<table>
+  <tr>
+    <td>Avg</td><td>Floor</td><td>Wall</td><td>Cabinet</td><td>Bed</td><td>Chair</td><td>Sofa</td><td>Table</td><td>Door</td><td>Window</td><td>Bookshelf</td><td>Picture</td><td>Counter</td><td>Desk</td><td>Curtain</td><td>Refrigerator</td><td>Bathtub</td><td>Shower</td><td>Toilet</td><td>Sink</td><td>Others</td>
+  </tr>
+  <tr>
+    <td>43.7</td><td>87.22</td><td>60.92</td><td>31.9</td><td>55.86</td><td>57.44</td><td>60.09</td><td>45.58</td><td>30.26</td><td>38.02</td><td>16.37</td><td>22.88</td><td>35.83</td><td>36.95</td><td>22.39</td><td>32.05</td><td>43.54</td><td>50.01</td><td>55.18</td><td>49.99</td><td>40.56</td>
+  </tr>
+ </table>
 
 ## Acknowledgement
 * [charlesq34/pointnet2](https://github.com/charlesq34/pointnet2): Paper author and official code repo.
