@@ -185,7 +185,7 @@ class Solver():
             "iter_time": [],
             # loss (float, not torch.cuda.FloatTensor)
             "loss": [],
-            # constraint loss (float, not torch.cuda.FloatTensor)
+            # scores (float, not torch.cuda.FloatTensor)
             "point_acc": [],
             "point_acc_per_class": [],
             "voxel_acc": [],
@@ -256,7 +256,7 @@ class Solver():
             "iter_time": [],
             # loss (float, not torch.cuda.FloatTensor)
             "loss": [],
-            # constraint loss (float, not torch.cuda.FloatTensor)
+            # scores (float, not torch.cuda.FloatTensor)
             "point_acc": [],
             "point_acc_per_class": [],
             "voxel_acc": [],
@@ -334,11 +334,11 @@ class Solver():
         pointmiou, voxmiou, miou_mask = compute_miou(coords, preds, targets, weights)
         
         self._running_log["point_acc"] = pointacc
-        self._running_log["point_acc_per_class"] = np.mean(pointacc_per_class * acc_mask)
+        self._running_log["point_acc_per_class"] = np.sum(pointacc_per_class * acc_mask)/np.sum(acc_mask)
         self._running_log["voxel_acc"] = voxacc
-        self._running_log["voxel_acc_per_class"] = np.mean(voxacc_per_class * acc_mask)
-        self._running_log["point_miou"] = np.mean(pointmiou * miou_mask)
-        self._running_log["voxel_miou"] = np.mean(voxmiou * miou_mask)
+        self._running_log["voxel_acc_per_class"] = np.sum(voxacc_per_class * acc_mask)/np.sum(acc_mask)
+        self._running_log["point_miou"] = np.sum(pointmiou * miou_mask)/np.sum(miou_mask)
+        self._running_log["voxel_miou"] = np.sum(voxmiou * miou_mask)/np.sum(miou_mask)
 
     def _dump_log(self, epoch_id):
         # loss

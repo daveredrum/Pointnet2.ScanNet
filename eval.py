@@ -191,17 +191,17 @@ def evaluate(args):
     pointacc_list, pointacc_per_class_array, voxacc_list, voxacc_per_class_array, voxcaliacc_list, pointmiou_per_class_array, voxmiou_per_class_array, masks = eval_wholescene(args, model, dataloader)
     
     avg_pointacc = np.mean(pointacc_list)
-    avg_pointacc_per_class = np.mean(pointacc_per_class_array * masks, axis=0)
+    avg_pointacc_per_class = np.sum(pointacc_per_class_array * masks, axis=0)/np.sum(masks, axis=0)
 
     avg_voxacc = np.mean(voxacc_list)
-    avg_voxacc_per_class = np.mean(voxacc_per_class_array * masks, axis=0)
+    avg_voxacc_per_class = np.sum(voxacc_per_class_array * masks, axis=0)/np.sum(masks, axis=0)
 
     avg_voxcaliacc = np.mean(voxcaliacc_list)
     
-    avg_pointmiou_per_class = np.mean(pointmiou_per_class_array * masks, axis=0)
+    avg_pointmiou_per_class = np.sum(pointmiou_per_class_array * masks, axis=0)/np.sum(masks, axis=0)
     avg_pointmiou = np.mean(avg_pointmiou_per_class)
 
-    avg_voxmiou_per_class = np.mean(voxmiou_per_class_array * masks, axis=0)
+    avg_voxmiou_per_class = np.sum(voxmiou_per_class_array * masks, axis=0)/np.sum(masks, axis=0)
     avg_voxmiou = np.mean(avg_voxmiou_per_class)
 
     # report
