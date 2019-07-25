@@ -23,15 +23,15 @@ class ScannetDataset():
             self.semantic_labels_list.append(scene_data[:, 7])
 
         if self.is_weighting:
-            labelweights = np.zeros(21)
+            labelweights = np.zeros(CONF.NUM_CLASSES)
             for seg in self.semantic_labels_list:
-                tmp,_ = np.histogram(seg,range(22))
+                tmp,_ = np.histogram(seg,range(CONF.NUM_CLASSES + 1))
                 labelweights += tmp
             labelweights = labelweights.astype(np.float32)
             labelweights = labelweights/np.sum(labelweights)
             self.labelweights = 1/np.log(1.2+labelweights)
         else:
-            self.labelweights = np.ones(21)
+            self.labelweights = np.ones(CONF.NUM_CLASSES)
 
     def __getitem__(self, index):
         start = time.time()
@@ -97,15 +97,15 @@ class ScannetDatasetWholeScene():
             self.semantic_labels_list.append(scene_data[:, 7])
 
         if self.is_weighting:
-            labelweights = np.zeros(21)
+            labelweights = np.zeros(CONF.NUM_CLASSES)
             for seg in self.semantic_labels_list:
-                tmp,_ = np.histogram(seg,range(22))
+                tmp,_ = np.histogram(seg,range(CONF.NUM_CLASSES + 1))
                 labelweights += tmp
             labelweights = labelweights.astype(np.float32)
             labelweights = labelweights/np.sum(labelweights)
             self.labelweights = 1/np.log(1.2+labelweights)
         else:
-            self.labelweights = np.ones(21)
+            self.labelweights = np.ones(CONF.NUM_CLASSES)
 
     def __getitem__(self, index):
         start = time.time()
