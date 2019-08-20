@@ -19,6 +19,7 @@ class ScannetDataset():
         self.semantic_labels_list = []
         for scene_id in self.scene_list:
             scene_data = np.load(CONF.SCANNETV2_FILE.format(scene_id))
+            scene_data[:, 3:6] /= 255. # normalize the rgb values
             self.scene_points_list.append(scene_data[:, :6])
             self.semantic_labels_list.append(scene_data[:, 7])
 
@@ -93,6 +94,7 @@ class ScannetDatasetWholeScene():
         self.semantic_labels_list = []
         for scene_id in self.scene_list:
             scene_data = np.load(CONF.SCANNETV2_FILE.format(scene_id))
+            scene_data[:, 3:6] /= 255. # normalize the rgb values
             self.scene_points_list.append(scene_data[:, :6])
             self.semantic_labels_list.append(scene_data[:, 7])
 
