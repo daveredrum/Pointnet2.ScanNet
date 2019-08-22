@@ -8,11 +8,11 @@ The semantic segmentation results in percentage on the ScanNet train/val split i
     <td>Avg</td><td>Floor</td><td>Wall</td><td>Cabinet</td><td>Bed</td><td>Chair</td><td>Sofa</td><td>Table</td><td>Door</td><td>Window</td><td>Bookshelf</td><td>Picture</td><td>Counter</td><td>Desk</td><td>Curtain</td><td>Refrigerator</td><td>Bathtub</td><td>Shower</td><td>Toilet</td><td>Sink</td><td>Others</td>
   </tr>
   <tr>
-    <td>43.7</td><td>87.22</td><td>60.92</td><td>31.9</td><td>55.86</td><td>57.44</td><td>60.09</td><td>45.58</td><td>30.26</td><td>38.02</td><td>16.37</td><td>22.88</td><td>35.83</td><td>36.95</td><td>22.39</td><td>32.05</td><td>43.54</td><td>50.01</td><td>55.18</td><td>49.99</td><td>40.56</td>
+    <td><b>50.62</b></td><td>90.96</td><td>63.87</td><td>35.21</td><td>56.75</td><td>62.43</td><td>68.46</td><td>47.15</td><td>36.12</td><td>34.12</td><td>25.62</td><td>23.58</td><td>41.46</td><td>42.73</td><td>32.38</td><td>44.12</td><td>64.93</td><td>63.90</td><td>74.04</td><td>58.13</td><td>46.40</td>
   </tr>
 </table>
 
-The pretrained model can be found [here](https://www.dropbox.com/s/hopka24rhr2v9fv/model.pth?dl=0)
+The pretrained models: [SSG](https://www.dropbox.com/s/wunli6uxqf2llor/pointnet2_semseg_ssg_xyzrgb.pth?dl=0) [MSG](https://www.dropbox.com/s/3cokg7ediutei1d/pointnet2_semseg_msg_xyzrgb.pth?dl=0) 
 
 ## Installation
 ### Requirements
