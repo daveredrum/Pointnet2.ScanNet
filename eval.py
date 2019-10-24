@@ -5,14 +5,13 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from PointNet2ScanNetDataset import ScannetDatasetWholeScene, collate_wholescene
-from pc_util import point_cloud_label_to_surface_voxel_label_fast
-
 # for PointNet2.PyTorch module
 import sys
 sys.path.append(".")
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pointnet2/'))
 from lib.config import CONF
+from lib.dataset import ScannetDatasetWholeScene, collate_wholescene
+from lib.pc_util import point_cloud_label_to_surface_voxel_label_fast
 
 def get_scene_list(path):
     scene_list = []
@@ -174,15 +173,15 @@ def eval_wholescene(args, model, dataloader):
 def evaluate(args):
     # prepare data
     print("preparing data...")
-    scene_list = get_scene_list("python/Mesh2Loc/data/scannetv2_val.txt")
-    dataset = ScannetDatasetWholeScene(scene_list, is_train=False)
+    scene_list = get_scene_list("data/scannetv2_val.txt")
+    dataset = ScannetDatasetWholeScene(scene_list)
     dataloader = DataLoader(dataset, batch_size=1, collate_fn=collate_wholescene)
 
     # load model
     print("loading model...")
     model_path = os.path.join(CONF.OUTPUT_ROOT, args.folder, "model.pth")
-    Pointnet = importlib.import_module("pointnet2_msg_semseg")
-    model = Pointnet.get_model(num_classes=21).cuda()
+    Pointnet = importlib.import_module("pointnet2_semseg")
+    model = Pointnet.get_model(num_classes=CONF.NUM_CLASSES).cuda()
     model.load_state_dict(torch.load(model_path))
     model.eval()
 

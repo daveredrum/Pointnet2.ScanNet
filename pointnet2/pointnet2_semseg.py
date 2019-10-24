@@ -4,7 +4,7 @@ from pointnet2_modules import PointnetFPModule, PointnetSAModule, PointnetSAModu
 import pytorch_utils as pt_utils
 
 
-def get_model(num_classes, is_msg=True, input_channels=3, use_xyz=True, bn=True):
+def get_model(num_classes, is_msg=True, input_channels=6, use_xyz=True, bn=True):
     if is_msg:
         model = Pointnet2MSG(
             num_classes=num_classes, 
@@ -81,8 +81,7 @@ class Pointnet2MSG(nn.Module):
 
     def _break_up_pc(self, pc):
         xyz = pc[..., 0:3].contiguous()
-        # features = pc[..., 3:].transpose(1, 2).contiguous()  # rgb
-        features = pc[..., :].transpose(1, 2).contiguous()  # xyz + rgb
+        features = pc[..., :].transpose(1, 2).contiguous()
 
         return xyz, features
 
@@ -161,8 +160,7 @@ class Pointnet2SSG(nn.Module):
 
     def _break_up_pc(self, pc):
         xyz = pc[..., 0:3].contiguous()
-        # features = pc[..., 3:].transpose(1, 2).contiguous()  # rgb
-        features = pc[..., :].transpose(1, 2).contiguous()  # xyz + rgb
+        features = pc[..., :].transpose(1, 2).contiguous()
 
         return xyz, features
 

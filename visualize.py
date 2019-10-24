@@ -5,13 +5,13 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from plyfile import PlyElement, PlyData
-from PointNet2ScanNetDataset import ScannetDatasetWholeScene, collate_wholescene
 
 # for PointNet2.PyTorch module
 import sys
 sys.path.append(".")
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pointnet2/'))
 from lib.config import CONF
+from lib.dataset import ScannetDatasetWholeScene, collate_wholescene
 
 def forward(args, model, coords, feats):
     pred = []
@@ -118,13 +118,13 @@ def evaluate(args):
     # prepare data
     print("preparing data...")
     scene_list = get_scene_list(args)
-    dataset = ScannetDatasetWholeScene(scene_list, is_weighting=True)
+    dataset = ScannetDatasetWholeScene(scene_list)
     dataloader = DataLoader(dataset, batch_size=1, collate_fn=collate_wholescene)
 
     # load model
     print("loading model...")
     model_path = os.path.join(CONF.OUTPUT_ROOT, args.folder, "model.pth")
-    Pointnet = importlib.import_module("pointnet2_msg_semseg")
+    Pointnet = importlib.import_module("pointnet2_semseg")
     model = Pointnet.get_model(num_classes=CONF.NUM_CLASSES).cuda()
     model.load_state_dict(torch.load(model_path))
     model.eval()
