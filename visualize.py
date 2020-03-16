@@ -125,7 +125,7 @@ def evaluate(args):
     print("loading model...")
     model_path = os.path.join(CONF.OUTPUT_ROOT, args.folder, "model.pth")
     Pointnet = importlib.import_module("pointnet2_semseg")
-    model = Pointnet.get_model(num_classes=CONF.NUM_CLASSES).cuda()
+    model = Pointnet.get_model(num_classes=CONF.NUM_CLASSES, is_msg=args.msg).cuda()
     model.load_state_dict(torch.load(model_path))
     model.eval()
 
@@ -144,6 +144,7 @@ if __name__ == "__main__":
     parser.add_argument('--batch_size', type=int, help='size of the batch/chunk', default=8)
     parser.add_argument('--gpu', type=str, help='gpu', default='0')
     parser.add_argument("--scene_id", type=str, default=None)
+    parser.add_argument("--msg", action="store_true", help="apply multiscale grouping or not")
     args = parser.parse_args()
 
     # setting
