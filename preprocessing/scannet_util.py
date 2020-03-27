@@ -6,7 +6,7 @@ g_label_names = CONF.NYUCLASSES
 
 def get_raw2scannet_label_map():
     # lines = [line.rstrip() for line in open('scannet-labels.combined.tsv')]
-    lines = [line.rstrip() for line in open('preprocess/scannetv2-labels.combined.tsv')]
+    lines = [line.rstrip() for line in open('preprocessing/scannetv2-labels.combined.tsv')]
     lines = lines[1:]
     raw2scannet = {}
     for i in range(len(lines)):
