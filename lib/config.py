@@ -6,12 +6,17 @@ CONF = EasyDict()
 # BASE PATH
 CONF.ROOT = "/home/davech2y/Pointnet2.ScanNet" # TODO change this
 CONF.SCANNET_DIR =  "/mnt/canis/Datasets/ScanNet/public/v2/scans" # TODO change this
+CONF.SCANNET_FRAMES_ROOT = "/home/davech2y/frames_square/" # TODO change this
+CONF.PROJECTION = "/home/davech2y/multiview_projection_pointnet" # TODO change this
+CONF.SCANNET_FRAMES = os.path.join(CONF.SCANNET_FRAMES_ROOT, "{}/{}") # scene_id, mode 
+CONF.ENET_FEATURES = "/home/davech2y/enet_features/{}/{}.npy" # scene_id, frame_id
 CONF.SCENE_NAMES = sorted(os.listdir(CONF.SCANNET_DIR))
 
 CONF.PREP = os.path.join(CONF.ROOT, "preprocessing")
 CONF.PREP_SCANS = os.path.join(CONF.PREP, "scannet_scenes")
 CONF.SCAN_LABELS = os.path.join(CONF.PREP, "label_point_clouds")
 CONF.OUTPUT_ROOT = os.path.join(CONF.ROOT, "outputs")
+CONF.ENET_WEIGHTS = os.path.join(CONF.ROOT, "data/scannetv2_enet.pth")
 CONF.MULTIVIEW = os.path.join(CONF.PREP_SCANS, "enet_feats.hdf5")
 
 CONF.SCANNETV2_TRAIN = os.path.join(CONF.ROOT, "data/scannetv2_train.txt")

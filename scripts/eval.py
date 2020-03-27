@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 
 # for PointNet2.PyTorch module
 import sys
-sys.path.append(".")
+sys.path.append(os.path.join(os.getcwd())) # HACK add the root folder
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pointnet2/'))
 from lib.config import CONF
 from lib.dataset import ScannetDatasetWholeScene, collate_wholescene

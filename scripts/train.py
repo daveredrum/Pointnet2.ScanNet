@@ -10,7 +10,7 @@ import numpy as np
 from datetime import datetime
 from torch.utils.data import DataLoader
 
-sys.path.append(".")
+sys.path.append(os.path.join(os.getcwd())) # HACK add the root folder
 from lib.solver import Solver
 from lib.dataset import ScannetDataset, ScannetDatasetWholeScene, collate_random, collate_wholescene
 from lib.loss import WeightedCrossEntropyLoss
