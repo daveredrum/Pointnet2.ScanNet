@@ -76,8 +76,8 @@ def train(args):
         val_scene_list = get_scene_list(CONF.SCANNETV2_VAL)
 
     # dataloader
-    train_dataset, train_dataloader = get_dataloader(args, train_scene_list, args.weighting, args.wholescene)
-    val_dataset, val_dataloader = get_dataloader(args, val_scene_list, args.weighting, args.wholescene)
+    train_dataset, train_dataloader = get_dataloader(args, train_scene_list, not args.no_weighting, args.wholescene)
+    val_dataset, val_dataloader = get_dataloader(args, val_scene_list, not args.no_weighting, args.wholescene)
     dataloader = {
         "train": train_dataloader,
         "val": val_dataloader
@@ -104,16 +104,16 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--tag', type=str, help="tag for the training, e.g. cuda_wl", default="cuda_wl")
     parser.add_argument('--gpu', type=str, help='gpu', default='0')
-    parser.add_argument('--batch_size', type=int, help='batch size', default=1)
-    parser.add_argument('--epoch', type=int, help='number of epochs', default=10)
-    parser.add_argument('--verbose', type=int, help='iterations of showing verbose', default=1)
-    parser.add_argument('--lr', type=float, help='learning rate', default=5e-5)
+    parser.add_argument('--batch_size', type=int, help='batch size', default=32)
+    parser.add_argument('--epoch', type=int, help='number of epochs', default=500)
+    parser.add_argument('--verbose', type=int, help='iterations of showing verbose', default=10)
+    parser.add_argument('--lr', type=float, help='learning rate', default=1e-3)
     parser.add_argument('--wd', type=float, help='weight decay', default=0)
     parser.add_argument('--bn', type=bool, help='batch norm', default=True)
     parser.add_argument('--ds', type=int, help='decay step', default=100)
     parser.add_argument('--df', type=float, help='decay factor', default=0.7)
     parser.add_argument("--debug", action="store_true")
-    parser.add_argument("--weighting", action="store_true", help="weight the classes")
+    parser.add_argument("--no_weighting", action="store_true", help="weight the classes")
     parser.add_argument("--wholescene", action="store_true", help="on the whole scene or on a random chunk")
     parser.add_argument("--msg", action="store_true", help="apply multiscale grouping or not")
     args = parser.parse_args()
