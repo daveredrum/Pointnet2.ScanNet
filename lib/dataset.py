@@ -70,16 +70,6 @@ class ScannetDataset():
             multiview_features = self.multiview_features[index]
             point_set = np.concatenate([point_set, multiview_features], axis=1)
 
-        # load multiview database
-        if self.use_multiview:
-            pid = mp.current_process().pid
-            if pid not in self.multiview_data:
-                self.multiview_data[pid] = h5py.File(CONF.MULTIVIEW, "r", libver="latest")
-
-            scene_id = self.scene_list[index]
-            multiview = self.multiview_data[pid][scene_id]
-            point_set = np.concatenate([point_set, multiview], 1)
-
         semantic_seg = self.semantic_labels_list[index].astype(np.int32)
         coordmax = np.max(point_set,axis=0)[:3]
         coordmin = np.min(point_set,axis=0)[:3]

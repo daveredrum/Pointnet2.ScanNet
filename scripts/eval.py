@@ -38,7 +38,8 @@ def forward(args, model, coords, feats):
 
 def filter_points(coords, preds, targets, weights):
     assert coords.shape[0] == preds.shape[0] == targets.shape[0] == weights.shape[0]
-    _, coord_ids = np.unique(np.array(coords), return_index=True)
+    coord_hash = [hash(str(coords[point_idx][0]) + str(coords[point_idx][1]) + str(coords[point_idx][2])) for point_idx in range(coords.shape[0])]
+    _, coord_ids = np.unique(np.array(coord_hash), return_index=True)
     coord_filtered, pred_filtered, target_filtered, weight_filtered = coords[coord_ids], preds[coord_ids], targets[coord_ids], weights[coord_ids]
 
     return coord_filtered, pred_filtered, target_filtered, weight_filtered
@@ -173,14 +174,13 @@ def evaluate(args):
     # prepare data
     print("preparing data...")
     scene_list = get_scene_list("data/scannetv2_val.txt")
-    dataset = ScannetDatasetWholeScene(scene_list, is_weighting=not args.no_weighting, use_color=args.use_color, use_normal=args.use_normal, use_multiview=args.use_multiview)
+    dataset = ScannetDatasetWholeScene(scene_list, use_color=args.use_color, use_normal=args.use_normal, use_multiview=args.use_multiview)
     dataloader = DataLoader(dataset, batch_size=1, collate_fn=collate_wholescene)
 
     # load model
     print("loading model...")
     model_path = os.path.join(CONF.OUTPUT_ROOT, args.folder, "model.pth")
     Pointnet = importlib.import_module("pointnet2_semseg")
-    input_channels = int(args.use_color) * 3 + int(args.use_normal) * 3 + int(args.use_multiview) * 128
     model = Pointnet.get_model(num_classes=CONF.NUM_CLASSES, is_msg=args.use_msg, input_channels=input_channels, use_xyz=not args.no_xyz, bn=not args.no_bn).cuda()
     model.load_state_dict(torch.load(model_path))
     model.eval()
