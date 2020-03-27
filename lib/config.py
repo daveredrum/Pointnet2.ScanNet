@@ -6,7 +6,7 @@ CONF = EasyDict()
 # BASE PATH
 CONF.ROOT = "/home/davech2y/Pointnet2.ScanNet" # TODO change this
 CONF.SCANNET_DIR =  "/mnt/canis/Datasets/ScanNet/public/v2/scans" # TODO change this
-CONF.SCENE_NAMES = os.listdir('/mnt/canis/Datasets/ScanNet/public/v1/scans') # TODO change
+CONF.SCENE_NAMES = sorted(os.listdir(CONF.SCANNET_DIR))
 
 CONF.PREP = os.path.join(CONF.ROOT, "preprocessing")
 CONF.PREP_SCANS = os.path.join(CONF.PREP, "scannet_scenes")
