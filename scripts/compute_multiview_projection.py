@@ -14,7 +14,7 @@ from lib.config import CONF
 from lib.projection import ProjectionHelper
 
 # data path
-SCANNET_LIST = CONF.SCENE_NAMES
+SCANNET_LIST = CONF.SCANNETV2_LIST
 SCANNET_DATA = CONF.PREP_SCANS
 PROJECTION_ROOT = CONF.PROJECTION
 PROJECTION_PATH = os.path.join(PROJECTION_ROOT, "{}_{}.npy") # scene_id, mode

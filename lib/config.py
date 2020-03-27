@@ -21,6 +21,8 @@ CONF.MULTIVIEW = os.path.join(CONF.PREP_SCANS, "enet_feats.hdf5")
 
 CONF.SCANNETV2_TRAIN = os.path.join(CONF.ROOT, "data/scannetv2_train.txt")
 CONF.SCANNETV2_VAL = os.path.join(CONF.ROOT, "data/scannetv2_val.txt")
+CONF.SCANNETV2_TEST = os.path.join(CONF.ROOT, "data/scannetv2_test.txt")
+CONF.SCANNETV2_LIST = os.path.join(CONF.ROOT, "data/scannetv2.txt")
 CONF.SCANNETV2_FILE = os.path.join(CONF.PREP_SCANS, "{}.npy") # scene_id
 CONF.SCANNETV2_LABEL = os.path.join(CONF.SCAN_LABELS, "{}.ply") # scene_id
 
