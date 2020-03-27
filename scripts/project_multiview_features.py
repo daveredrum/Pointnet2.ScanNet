@@ -79,7 +79,6 @@ def load_depth(file, image_dims):
 def get_scene_data(scene_list):
     scene_data = {}
     for scene_id in scene_list:
-        scene_data[scene_id] = {}
         scene_data[scene_id] = np.load(os.path.join(SCANNET_DATA, scene_id)+".npy")[:, :3]
     
     return scene_data
