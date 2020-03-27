@@ -108,7 +108,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, help='batch size', default=32)
     parser.add_argument('--epoch', type=int, help='number of epochs', default=500)
     parser.add_argument('--verbose', type=int, help='iterations of showing verbose', default=10)
-    parser.add_argument('--num_workers', type=int, help='number of workers in dataloader', default=4)
+    parser.add_argument('--num_workers', type=int, help='number of workers in dataloader', default=0)
     parser.add_argument('--lr', type=float, help='learning rate', default=1e-3)
     parser.add_argument('--wd', type=float, help='weight decay', default=0)
     parser.add_argument('--ds', type=int, help='decay step', default=100)
