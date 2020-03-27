@@ -32,6 +32,20 @@ python setup.py install
 ### Configure
 Change the path configurations for the ScanNet data in `lib/config.py`
 
+### Prepare multiview features (optional)
+extract the multiview features from ENet:
+```shell
+python compute_multiview_features.py
+```
+generate the projection mapping between image and point cloud
+```shell
+python compute_multiview_projection.py
+```
+project the multiview features from image space to point cloud
+```shell
+python project_multiview_features.py
+```
+
 ## Usage
 ### preprocess ScanNet scenes
 Parse the ScanNet data into `*.npy` files and save them in `preprocessing/scannet_scenes/`
@@ -48,7 +62,7 @@ The visualized `<scene_id>.ply` is stored in `preprocessing/label_point_clouds/`
 ### train
 Train the PointNet++ semantic segmentation model on ScanNet scenes
 ```shell
-python train.py --batch_size 32 --epoch 500 --lr 1e-3 --verbose 10 --weighting
+python train.py
 ```
 The trained models and logs will be saved in `outputs/<time_stamp>/`
 > Note: please refer to [train.py](https://github.com/daveredrum/Pointnet2.ScanNet/blob/master/train.py) for more training settings
@@ -56,13 +70,13 @@ The trained models and logs will be saved in `outputs/<time_stamp>/`
 ### eval
 Evaluate the trained models and report the segmentation performance in point accuracy, voxel accuracy and calibrated voxel accuracy
 ```shell
-python eval.py --batch_size 32 --folder <time_stamp>
+python eval.py --folder <time_stamp>
 ```
 
 ### vis
 Visualize the semantic segmentation results on points in a given scene
 ```shell
-python visualize.py --batch_size 32 --folder <time_stamp> --scene_id <scene_id>
+python visualize.py --folder <time_stamp> --scene_id <scene_id>
 ```
 The generated `<scene_id>.ply` is stored in `outputs/<time_stamp>/preds`. See the class palette [here](http://kaldir.vc.in.tum.de/scannet_benchmark/img/legend.jpg)
 
