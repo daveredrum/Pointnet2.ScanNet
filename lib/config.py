@@ -12,6 +12,7 @@ CONF.PREP = os.path.join(CONF.ROOT, "preprocessing")
 CONF.PREP_SCANS = os.path.join(CONF.PREP, "scannet_scenes")
 CONF.SCAN_LABELS = os.path.join(CONF.PREP, "label_point_clouds")
 CONF.OUTPUT_ROOT = os.path.join(CONF.ROOT, "outputs")
+CONF.MULTIVIEW = os.path.join(CONF.PREP_SCANS, "enet_feats.hdf5")
 
 CONF.SCANNETV2_TRAIN = os.path.join(CONF.ROOT, "data/scannetv2_train.txt")
 CONF.SCANNETV2_VAL = os.path.join(CONF.ROOT, "data/scannetv2_val.txt")

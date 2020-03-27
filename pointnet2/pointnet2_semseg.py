@@ -81,7 +81,7 @@ class Pointnet2MSG(nn.Module):
 
     def _break_up_pc(self, pc):
         xyz = pc[..., 0:3].contiguous()
-        features = pc[..., :].transpose(1, 2).contiguous()
+        features = pc[..., 3:].transpose(1, 2).contiguous()
 
         return xyz, features
 
@@ -160,7 +160,7 @@ class Pointnet2SSG(nn.Module):
 
     def _break_up_pc(self, pc):
         xyz = pc[..., 0:3].contiguous()
-        features = pc[..., :].transpose(1, 2).contiguous()
+        features = pc[..., 3:].transpose(1, 2).contiguous()
 
         return xyz, features
 

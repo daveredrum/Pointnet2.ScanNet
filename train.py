@@ -17,13 +17,13 @@ from lib.loss import WeightedCrossEntropyLoss
 from lib.config import CONF
 
 
-def get_dataloader(args, scene_list, is_weighting=True, is_wholescene=False):
-    if is_wholescene:
-        dataset = ScannetDatasetWholeScene(scene_list, is_weighting=is_weighting)
-        dataloader = DataLoader(dataset, batch_size=1, collate_fn=collate_wholescene)
+def get_dataloader(args, scene_list):
+    if args.use_wholescene:
+        dataset = ScannetDatasetWholeScene(scene_list, is_weighting=not args.no_weighting, use_color=args.use_color, use_normal=args.use_normal, use_multiview=args.use_multiview)
+        dataloader = DataLoader(dataset, batch_size=1, collate_fn=collate_wholescene, num_workers=args.num_workers)
     else:
-        dataset = ScannetDataset(scene_list, is_weighting=is_weighting)
-        dataloader = DataLoader(dataset, batch_size=args.batch_size, collate_fn=collate_random)
+        dataset = ScannetDataset(scene_list, is_weighting=not args.no_weighting, use_color=args.use_color, use_normal=args.use_normal, use_multiview=args.use_multiview)
+        dataloader = DataLoader(dataset, batch_size=args.batch_size, collate_fn=collate_random, num_workers=args.num_workers)
 
     return dataset, dataloader
 
@@ -33,15 +33,16 @@ def get_num_params(model):
 
     return num_params
 
-def get_solver(args, dataloader, stamp, weight, is_wholescene):
+def get_solver(args, dataloader, stamp, weight):
     sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pointnet2/'))
-    Pointnet = importlib.import_module("pointnet2_msg_semseg")
-    model = Pointnet.get_model(num_classes=CONF.NUM_CLASSES, is_msg=args.msg).cuda()
+    Pointnet = importlib.import_module("pointnet2_semseg")
+    input_channels = int(args.use_color) * 3 + int(args.use_normal) * 3 + int(args.use_multiview) * 128
+    model = Pointnet.get_model(num_classes=CONF.NUM_CLASSES, is_msg=args.use_msg, input_channels=input_channels, use_xyz=not args.no_xyz, use_bn=not args.no_bn).cuda()
 
     num_params = get_num_params(model)
     criterion = WeightedCrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
-    solver = Solver(model, dataloader, criterion, optimizer, args.batch_size, stamp, is_wholescene, args.ds, args.df)
+    solver = Solver(model, dataloader, criterion, optimizer, args.batch_size, stamp, args.use_wholescene, args.ds, args.df)
 
     return solver, num_params
 
@@ -76,8 +77,8 @@ def train(args):
         val_scene_list = get_scene_list(CONF.SCANNETV2_VAL)
 
     # dataloader
-    train_dataset, train_dataloader = get_dataloader(args, train_scene_list, not args.no_weighting, args.wholescene)
-    val_dataset, val_dataloader = get_dataloader(args, val_scene_list, not args.no_weighting, args.wholescene)
+    train_dataset, train_dataloader = get_dataloader(args, train_scene_list)
+    val_dataset, val_dataloader = get_dataloader(args, val_scene_list)
     dataloader = {
         "train": train_dataloader,
         "val": val_dataloader
@@ -91,7 +92,7 @@ def train(args):
     if args.tag: stamp += "_"+args.tag.upper()
     root = os.path.join(CONF.OUTPUT_ROOT, stamp)
     os.makedirs(root, exist_ok=True)
-    solver, num_params = get_solver(args, dataloader, stamp, weight, args.wholescene)
+    solver, num_params = get_solver(args, dataloader, stamp, weight)
     
     print("\n[info]")
     print("Train examples: {}".format(train_examples))
@@ -109,13 +110,17 @@ if __name__ == '__main__':
     parser.add_argument('--verbose', type=int, help='iterations of showing verbose', default=10)
     parser.add_argument('--lr', type=float, help='learning rate', default=1e-3)
     parser.add_argument('--wd', type=float, help='weight decay', default=0)
-    parser.add_argument('--bn', type=bool, help='batch norm', default=True)
     parser.add_argument('--ds', type=int, help='decay step', default=100)
     parser.add_argument('--df', type=float, help='decay factor', default=0.7)
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--no_weighting", action="store_true", help="weight the classes")
-    parser.add_argument("--wholescene", action="store_true", help="on the whole scene or on a random chunk")
-    parser.add_argument("--msg", action="store_true", help="apply multiscale grouping or not")
+    parser.add_argument('--no_bn', action="store_true", help="do not apply batch normalization in pointnet++")
+    parser.add_argument('--no_xyz', action="store_true", help="do not apply coordinates as features in pointnet++")
+    parser.add_argument("--use_wholescene", action="store_true", help="on the whole scene or on a random chunk")
+    parser.add_argument("--use_msg", action="store_true", help="apply multiscale grouping or not")
+    parser.add_argument("--use_color", action="store_true", help="use color values or not")
+    parser.add_argument("--use_normal", action="store_true", help="use normals or not")
+    parser.add_argument("--use_multiview", action="store_true", help="use multiview image features or not")
     args = parser.parse_args()
 
     # setting

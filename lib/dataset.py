@@ -1,17 +1,24 @@
 import os
 import sys
 import time
+import h5py
 import torch
 import numpy as np
+import multiprocessing as mp
 
 sys.path.append(".")
 from lib.config import CONF
 
 class ScannetDataset():
-    def __init__(self, scene_list, npoints=8192, is_weighting=True):
+    def __init__(self, scene_list, npoints=8192, is_weighting=True, use_color=False, use_normal=False, use_multiview=False):
         self.scene_list = scene_list
         self.npoints = npoints
         self.is_weighting = is_weighting
+        self.use_color = use_color
+        self.use_normal = use_normal
+        self.use_multiview = use_multiview
+
+        self.multiview_data = {}
         self._load_scene_file()
 
     def _load_scene_file(self):
@@ -19,9 +26,20 @@ class ScannetDataset():
         self.semantic_labels_list = []
         for scene_id in self.scene_list:
             scene_data = np.load(CONF.SCANNETV2_FILE.format(scene_id))
-            scene_data[:, 3:6] /= 255. # normalize the rgb values
-            self.scene_points_list.append(scene_data[:, :6])
-            self.semantic_labels_list.append(scene_data[:, 7])
+
+            # unpack
+            point_set = scene_data[:, :3] # include xyz by default
+            color = scene_data[:, 3:6] / 255. # normalize the rgb values to [0, 1]
+            normal = scene_data[:, 6:9]
+            label = scene_data[:, 10].astype(np.int32)
+            if self.use_color:
+                point_set = np.concatenate([point_set, color], axis=1)
+
+            if self.use_normal:
+                point_set = np.concatenate([point_set, normal], axis=1)
+
+            self.scene_points_list.append(point_set)
+            self.semantic_labels_list.append(label)
 
         if self.is_weighting:
             labelweights = np.zeros(CONF.NUM_CLASSES)
@@ -37,6 +55,17 @@ class ScannetDataset():
     def __getitem__(self, index):
         start = time.time()
         point_set = self.scene_points_list[index]
+
+        # load multiview database
+        if self.use_multiview:
+            pid = mp.current_process().pid
+            if pid not in self.multiview_data:
+                self.multiview_data[pid] = h5py.File(CONF.MULTIVIEW, "r", libver="latest")
+
+            scene_id = self.scene_list[index]
+            multiview = self.multiview_data[pid][scene_id]
+            point_set = np.concatenate([point_set, multiview], 1)
+
         semantic_seg = self.semantic_labels_list[index].astype(np.int32)
         coordmax = np.max(point_set,axis=0)[:3]
         coordmin = np.min(point_set,axis=0)[:3]
@@ -83,10 +112,15 @@ class ScannetDataset():
         return len(self.scene_points_list)
 
 class ScannetDatasetWholeScene():
-    def __init__(self, scene_list, npoints=8192, is_weighting=True):
+    def __init__(self, scene_list, npoints=8192, is_weighting=True, use_color=False, use_normal=False, use_multiview=False):
         self.scene_list = scene_list
         self.npoints = npoints
         self.is_weighting = is_weighting
+        self.use_color = use_color
+        self.use_normal = use_normal
+        self.use_multiview = use_multiview
+
+        self.multiview_data = {}
         self._load_scene_file()
 
     def _load_scene_file(self):
@@ -94,9 +128,20 @@ class ScannetDatasetWholeScene():
         self.semantic_labels_list = []
         for scene_id in self.scene_list:
             scene_data = np.load(CONF.SCANNETV2_FILE.format(scene_id))
-            scene_data[:, 3:6] /= 255. # normalize the rgb values
-            self.scene_points_list.append(scene_data[:, :6])
-            self.semantic_labels_list.append(scene_data[:, 7])
+
+            # unpack
+            point_set = scene_data[:, :3] # include xyz by default
+            color = scene_data[:, 3:6] / 255. # normalize the rgb values to [0, 1]
+            normal = scene_data[:, 6:9]
+            label = scene_data[:, 10].astype(np.int32)
+            if self.use_color:
+                point_set = np.concatenate([point_set, color], axis=1)
+
+            if self.use_normal:
+                point_set = np.concatenate([point_set, normal], axis=1)
+
+            self.scene_points_list.append(point_set)
+            self.semantic_labels_list.append(label)
 
         if self.is_weighting:
             labelweights = np.zeros(CONF.NUM_CLASSES)
@@ -112,6 +157,17 @@ class ScannetDatasetWholeScene():
     def __getitem__(self, index):
         start = time.time()
         point_set_ini = self.scene_points_list[index]
+
+        # load multiview database
+        if self.use_multiview:
+            pid = mp.current_process().pid
+            if pid not in self.multiview_data:
+                self.multiview_data[pid] = h5py.File(CONF.MULTIVIEW, "r", libver="latest")
+
+            scene_id = self.scene_list[index]
+            multiview = self.multiview_data[pid][scene_id]
+            point_set_ini = np.concatenate([point_set_ini, multiview], 1)
+
         semantic_seg_ini = self.semantic_labels_list[index].astype(np.int32)
         coordmax = point_set_ini[:, :3].max(axis=0)
         coordmin = point_set_ini[:, :3].min(axis=0)
