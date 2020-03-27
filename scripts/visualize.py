@@ -9,7 +9,7 @@ from plyfile import PlyElement, PlyData
 # for PointNet2.PyTorch module
 import sys
 sys.path.append(".")
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pointnet2/'))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '../pointnet2/'))
 from lib.config import CONF
 from lib.dataset import ScannetDatasetWholeScene, collate_wholescene
 
@@ -118,14 +118,15 @@ def evaluate(args):
     # prepare data
     print("preparing data...")
     scene_list = get_scene_list(args)
-    dataset = ScannetDatasetWholeScene(scene_list)
+    dataset = ScannetDatasetWholeScene(scene_list, use_color=args.use_color, use_normal=args.use_normal, use_multiview=args.use_multiview)
     dataloader = DataLoader(dataset, batch_size=1, collate_fn=collate_wholescene)
 
     # load model
     print("loading model...")
     model_path = os.path.join(CONF.OUTPUT_ROOT, args.folder, "model.pth")
     Pointnet = importlib.import_module("pointnet2_semseg")
-    model = Pointnet.get_model(num_classes=CONF.NUM_CLASSES, is_msg=args.msg).cuda()
+    input_channels = int(args.use_color) * 3 + int(args.use_normal) * 3 + int(args.use_multiview) * 128
+    model = Pointnet.get_model(num_classes=CONF.NUM_CLASSES, is_msg=args.use_msg, input_channels=input_channels, use_xyz=not args.no_xyz, bn=not args.no_bn).cuda()
     model.load_state_dict(torch.load(model_path))
     model.eval()
 
@@ -144,7 +145,12 @@ if __name__ == "__main__":
     parser.add_argument('--batch_size', type=int, help='size of the batch/chunk', default=8)
     parser.add_argument('--gpu', type=str, help='gpu', default='0')
     parser.add_argument("--scene_id", type=str, default=None)
-    parser.add_argument("--msg", action="store_true", help="apply multiscale grouping or not")
+    parser.add_argument('--no_bn', action="store_true", help="do not apply batch normalization in pointnet++")
+    parser.add_argument('--no_xyz', action="store_true", help="do not apply coordinates as features in pointnet++")
+    parser.add_argument("--use_msg", action="store_true", help="apply multiscale grouping or not")
+    parser.add_argument("--use_color", action="store_true", help="use color values or not")
+    parser.add_argument("--use_normal", action="store_true", help="use normals or not")
+    parser.add_argument("--use_multiview", action="store_true", help="use multiview image features or not")
     args = parser.parse_args()
 
     # setting

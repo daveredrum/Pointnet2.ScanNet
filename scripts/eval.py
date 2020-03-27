@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 # for PointNet2.PyTorch module
 import sys
 sys.path.append(os.path.join(os.getcwd())) # HACK add the root folder
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pointnet2/'))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '../pointnet2/'))
 from lib.config import CONF
 from lib.dataset import ScannetDatasetWholeScene, collate_wholescene
 from lib.pc_util import point_cloud_label_to_surface_voxel_label_fast
@@ -38,8 +38,7 @@ def forward(args, model, coords, feats):
 
 def filter_points(coords, preds, targets, weights):
     assert coords.shape[0] == preds.shape[0] == targets.shape[0] == weights.shape[0]
-    coord_hash = [hash(str(coords[point_idx][0]) + str(coords[point_idx][1]) + str(coords[point_idx][2])) for point_idx in range(coords.shape[0])]
-    _, coord_ids = np.unique(np.array(coord_hash), return_index=True)
+    _, coord_ids = np.unique(np.array(coords), return_index=True)
     coord_filtered, pred_filtered, target_filtered, weight_filtered = coords[coord_ids], preds[coord_ids], targets[coord_ids], weights[coord_ids]
 
     return coord_filtered, pred_filtered, target_filtered, weight_filtered
@@ -174,14 +173,15 @@ def evaluate(args):
     # prepare data
     print("preparing data...")
     scene_list = get_scene_list("data/scannetv2_val.txt")
-    dataset = ScannetDatasetWholeScene(scene_list)
+    dataset = ScannetDatasetWholeScene(scene_list, is_weighting=not args.no_weighting, use_color=args.use_color, use_normal=args.use_normal, use_multiview=args.use_multiview)
     dataloader = DataLoader(dataset, batch_size=1, collate_fn=collate_wholescene)
 
     # load model
     print("loading model...")
     model_path = os.path.join(CONF.OUTPUT_ROOT, args.folder, "model.pth")
     Pointnet = importlib.import_module("pointnet2_semseg")
-    model = Pointnet.get_model(num_classes=CONF.NUM_CLASSES, is_msg=args.msg).cuda()
+    input_channels = int(args.use_color) * 3 + int(args.use_normal) * 3 + int(args.use_multiview) * 128
+    model = Pointnet.get_model(num_classes=CONF.NUM_CLASSES, is_msg=args.use_msg, input_channels=input_channels, use_xyz=not args.no_xyz, bn=not args.no_bn).cuda()
     model.load_state_dict(torch.load(model_path))
     model.eval()
 
@@ -222,9 +222,14 @@ def evaluate(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--folder', type=str, help='output folder containing the best model from training', required=True)
-    parser.add_argument('--batch_size', type=int, help='size of the batch/chunk', default=8)
+    parser.add_argument('--batch_size', type=int, help='size of the batch/chunk', default=32)
     parser.add_argument('--gpu', type=str, help='gpu', default='0')
-    parser.add_argument("--msg", action="store_true", help="apply multiscale grouping or not")
+    parser.add_argument('--no_bn', action="store_true", help="do not apply batch normalization in pointnet++")
+    parser.add_argument('--no_xyz', action="store_true", help="do not apply coordinates as features in pointnet++")
+    parser.add_argument("--use_msg", action="store_true", help="apply multiscale grouping or not")
+    parser.add_argument("--use_color", action="store_true", help="use color values or not")
+    parser.add_argument("--use_normal", action="store_true", help="use normals or not")
+    parser.add_argument("--use_multiview", action="store_true", help="use multiview image features or not")
     args = parser.parse_args()
 
     # setting
