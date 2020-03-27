@@ -37,7 +37,7 @@ def get_solver(args, dataloader, stamp, weight):
     sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pointnet2/'))
     Pointnet = importlib.import_module("pointnet2_semseg")
     input_channels = int(args.use_color) * 3 + int(args.use_normal) * 3 + int(args.use_multiview) * 128
-    model = Pointnet.get_model(num_classes=CONF.NUM_CLASSES, is_msg=args.use_msg, input_channels=input_channels, use_xyz=not args.no_xyz, use_bn=not args.no_bn).cuda()
+    model = Pointnet.get_model(num_classes=CONF.NUM_CLASSES, is_msg=args.use_msg, input_channels=input_channels, use_xyz=not args.no_xyz, bn=not args.no_bn).cuda()
 
     num_params = get_num_params(model)
     criterion = WeightedCrossEntropyLoss()
