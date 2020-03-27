@@ -5,7 +5,7 @@ preprocessing/__pycache__
 
 # pointnet2 compiled
 pointnet2/build
-pointnte2/dis
+pointnte2/dist
 pointnet2/pointnet2.egg-info
 
 # prep data

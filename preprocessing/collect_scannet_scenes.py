@@ -61,7 +61,6 @@ def collect_one_scene_data_label(scene_name, out_filename):
         instance_labels_list.append(np.ones((instance_points.shape[0], 1))*i)   
         label = RAW2SCANNET[labels[i]]
         label = CLASS_NAMES.index(label)
-        label = CLASS_NAMES.index(label)
         semantic_labels_list.append(np.ones((instance_points.shape[0], 1))*label)
        
     # Refactor data format
