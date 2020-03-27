@@ -6,7 +6,7 @@ import numpy as np
 
 sys.path.append(".")
 from scannet_util import g_label_names, g_raw2scannet
-from lib.pc_util import read_ply_xyzrgb
+from lib.pc_util import read_ply_xyzrgbnormal
 from lib.utils import get_eta
 from lib.config import CONF
 
@@ -30,7 +30,7 @@ def collect_one_scene_data_label(scene_name, out_filename):
     
     # Raw points in XYZRGBA
     ply_filename = os.path.join(data_folder, '%s_vh_clean_2.ply' % (scene_name))
-    points = read_ply_xyzrgb(ply_filename)
+    points = read_ply_xyzrgbnormal(ply_filename)
     
     # Instances over-segmented segment IDs: annotation on segments
     instance_segids = []
@@ -65,7 +65,7 @@ def collect_one_scene_data_label(scene_name, out_filename):
        
     # Refactor data format
     scene_points = np.concatenate(instance_points_list, 0)
-    scene_points = scene_points[:,0:6] # XYZRGB, disregarding the A
+    scene_points = scene_points[:,0:9] # XYZ+RGB+NORMAL
     instance_labels = np.concatenate(instance_labels_list, 0) 
     semantic_labels = np.concatenate(semantic_labels_list, 0)
     data = np.concatenate((scene_points, instance_labels, semantic_labels), 1)
