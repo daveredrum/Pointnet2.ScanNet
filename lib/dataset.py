@@ -5,6 +5,7 @@ import h5py
 import torch
 import numpy as np
 import multiprocessing as mp
+from tqdm import tqdm
 
 sys.path.append(".")
 from lib.config import CONF
@@ -24,7 +25,7 @@ class ScannetDataset():
     def _load_scene_file(self):
         self.scene_points_list = []
         self.semantic_labels_list = []
-        for scene_id in self.scene_list:
+        for scene_id in tqdm(self.scene_list):
             scene_data = np.load(CONF.SCANNETV2_FILE.format(scene_id))
 
             # unpack
