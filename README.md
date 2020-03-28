@@ -33,15 +33,19 @@ python setup.py install
 Change the path configurations for the ScanNet data in `lib/config.py`
 
 ### Prepare multiview features (optional)
-extract the multiview features from ENet:
+1. Download the ScanNet frames [here](http://kaldir.vc.in.tum.de/3dsis/scannet_train_images.zip) (~13GB) and unzip it.
+
+2. Extract the multiview features from ENet:
 ```shell
 python compute_multiview_features.py
 ```
-generate the projection mapping between image and point cloud
+
+3. Generate the projection mapping between image and point cloud
 ```shell
 python compute_multiview_projection.py
 ```
-project the multiview features from image space to point cloud
+
+4. Project the multiview features from image space to point cloud
 ```shell
 python project_multiview_features.py
 ```
