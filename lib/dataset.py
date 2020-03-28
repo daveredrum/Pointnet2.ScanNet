@@ -43,7 +43,7 @@ class ScannetDataset():
             self.scene_data[scene_id] = scene_data
 
             if self.use_multiview:
-                feature = scene_features.get(scene_id)[()]
+                feature = multiview_database.get(scene_id)[()]
                 self.multiview_data[scene_id] = feature
 
         if self.is_weighting:
