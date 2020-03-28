@@ -7,6 +7,7 @@ from tqdm import tqdm
 sys.path.append(os.path.join(os.getcwd())) # HACK add the root folder
 from lib.config import CONF
 
+SCANNET_LIST = CONF.SCANNETV2_LIST
 ENET_FEATURE_DATABASE = CONF.MULTIVIEW
 SCANNET_DATA = CONF.PREP_SCANS
 
@@ -25,7 +26,7 @@ def load_scene(scene_list):
 
 if __name__ == "__main__":
     scene_list = get_scene_list()
-    scene_data = load_scene()
+    scene_data = load_scene(scene_list)
     multiview_data = h5py.File(ENET_FEATURE_DATABASE, "w", libver="latest")
 
     print("combining features to point cloud")
