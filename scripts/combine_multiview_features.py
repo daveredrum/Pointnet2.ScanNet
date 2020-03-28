@@ -28,7 +28,7 @@ def load_scene(scene_list):
 if __name__ == "__main__":
     scene_list = get_scene_list()
     scene_data = load_scene(scene_list)
-    multiview_data = h5py.File(ENET_FEATURE_DATABASE, "w", libver="latest")
+    multiview_data = h5py.File(ENET_FEATURE_DATABASE, "r", libver="latest")
 
     print("combining features to point cloud")
     for scene_id in scene_list:
