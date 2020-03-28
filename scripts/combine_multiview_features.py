@@ -32,9 +32,10 @@ if __name__ == "__main__":
 
     print("combining features to point cloud")
     for scene_id in tqdm(scene_list):
-        multiview_features = multiview_data.get(scene_id)[()]
-        scene_data[scene_id] = np.concatenate((scene_data[scene_id], multiview_features), 1)
+        if scene_data[scene_id].shape[1] == 11: # only combine the raw ones
+            multiview_features = multiview_data.get(scene_id)[()]
+            scene_data[scene_id] = np.concatenate((scene_data[scene_id], multiview_features), 1)
 
-        np.save(os.path.join(SCANNET_DATA, scene_id)+".npy", scene_data[scene_id])
+            np.save(os.path.join(SCANNET_DATA, scene_id)+".npy", scene_data[scene_id])
 
     print("done!")
