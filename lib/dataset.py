@@ -83,8 +83,6 @@ class ScannetDataset():
         sample_weight *= mask
 
         fetch_time = time.time() - start
-        print(point_set)
-        exit()
 
         return point_set, label, sample_weight, fetch_time
 
