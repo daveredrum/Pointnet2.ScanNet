@@ -28,8 +28,11 @@ class ScannetDataset():
 
     def _prepare_weights(self):
         self.scene_data = {}
+        self.multiview_data = {}
         scene_points_list = []
         semantic_labels_list = []
+        if self.use_multiview:
+            multiview_database = h5py.File(CONF.MULTIVIEW, "r", libver="latest")
         for scene_id in tqdm(self.scene_list):
             scene_data = np.load(CONF.SCANNETV2_FILE.format(scene_id))
             label = scene_data[:, 10]
@@ -38,6 +41,10 @@ class ScannetDataset():
             scene_points_list.append(scene_data)
             semantic_labels_list.append(label)
             self.scene_data[scene_id] = scene_data
+
+            if self.use_multiview:
+                feature = scene_features.get(scene_id)[()]
+                self.multiview_data[scene_id] = feature
 
         if self.is_weighting:
             labelweights = np.zeros(self.num_classes)
@@ -200,13 +207,11 @@ class ScannetDataset():
         """
 
         print("generate new chunks for {}...".format(self.phase))
-        if self.use_multiview:
-            scene_features = h5py.File(CONF.MULTIVIEW, "r", libver="latest")
         for scene_id in tqdm(self.scene_list):
             scene = self.scene_data[scene_id]
             semantic = scene[:, 10].astype(np.int32)
             if self.use_multiview:
-                feature = scene_features.get(scene_id)[()]
+                feature = self.multiview_data[scene_id]
 
             coordmax = np.max(scene, axis=0)[:3]
             coordmin = np.min(scene, axis=0)[:3]
