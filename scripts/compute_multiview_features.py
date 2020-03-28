@@ -22,8 +22,8 @@ SCANNET_FRAME_PATH = os.path.join(SCANNET_FRAME_ROOT, "{}") # name of the file
 SCANNET_LIST = CONF.SCANNETV2_LIST
 
 ENET_PATH = CONF.ENET_WEIGHTS
-ENET_FEATURE_ROOT = CONF.ENET_FEATURES_ROOT
-ENET_FEATURE_PATH = CONF.ENET_FEATURES
+ENET_FEATURE_ROOT = CONF.ENET_FEATURES_SUBROOT
+ENET_FEATURE_PATH = CONF.ENET_FEATURES_PATH
 
 class EnetDataset(Dataset):
     def __init__(self):
@@ -119,8 +119,7 @@ if __name__ == "__main__":
         batch_size = images.shape[0]
         for batch_id in range(batch_size):
             os.makedirs(ENET_FEATURE_ROOT.format(scene_ids[batch_id]), exist_ok=True)
-            if not os.path.exists(ENET_FEATURE_PATH.format(scene_ids[batch_id], frame_ids[batch_id])):
-                np.save(ENET_FEATURE_PATH.format(scene_ids[batch_id], frame_ids[batch_id]), features[batch_id].cpu().numpy())
+            np.save(ENET_FEATURE_PATH.format(scene_ids[batch_id], frame_ids[batch_id]), features[batch_id].cpu().numpy())
 
     print("done!")
 

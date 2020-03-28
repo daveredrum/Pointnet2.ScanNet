@@ -9,8 +9,9 @@ CONF.SCANNET_DIR =  "/mnt/canis/Datasets/ScanNet/public/v2/scans" # TODO change 
 CONF.SCANNET_FRAMES_ROOT = "/home/davech2y/frames_square/" # TODO change this
 CONF.PROJECTION = "/home/davech2y/multiview_projection_pointnet" # TODO change this
 CONF.ENET_FEATURES_ROOT = "/home/davech2y/enet_features" # TODO change this
+CONF.ENET_FEATURES_SUBROOT = os.path.join(CONF.ENET_FEATURES_ROOT, "{}") # scene_id
+CONF.ENET_FEATURES_PATH = os.path.join(CONF.ENET_FEATURES_SUBROOT, "{}.npy") # frame_id
 CONF.SCANNET_FRAMES = os.path.join(CONF.SCANNET_FRAMES_ROOT, "{}/{}") # scene_id, mode 
-CONF.ENET_FEATURES = os.path.join(CONF.ENET_FEATURES_ROOT, "{}/{}.npy") # scene_id, frame_id
 CONF.SCENE_NAMES = sorted(os.listdir(CONF.SCANNET_DIR))
 
 CONF.PREP = os.path.join(CONF.ROOT, "preprocessing")
