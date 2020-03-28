@@ -205,7 +205,7 @@ class ScannetDataset():
 
         print("generate new chunks for {}...".format(self.phase))
         if self.use_multiview:
-            scene_features = h5py.File(ENET_FEATURES, "r", libver="latest")
+            scene_features = h5py.File(CONF.MULTIVIEW, "r", libver="latest")
         for scene_id in tqdm(self.scene_list):
             scene = self.scene_data[scene_id]
             semantic = scene[:, 10].astype(np.int32)
