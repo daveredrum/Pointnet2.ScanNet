@@ -17,13 +17,13 @@ from lib.loss import WeightedCrossEntropyLoss
 from lib.config import CONF
 
 
-def get_dataloader(args, scene_list):
+def get_dataloader(args, scene_list, phase):
     if args.use_wholescene:
         dataset = ScannetDatasetWholeScene(scene_list, is_weighting=not args.no_weighting, use_color=args.use_color, use_normal=args.use_normal, use_multiview=args.use_multiview)
-        dataloader = DataLoader(dataset, batch_size=1, collate_fn=collate_wholescene, num_workers=args.num_workers)
+        dataloader = DataLoader(dataset, batch_size=1, collate_fn=collate_wholescene, num_workers=args.num_workers, pin_memory=True)
     else:
-        dataset = ScannetDataset(scene_list, is_weighting=not args.no_weighting, use_color=args.use_color, use_normal=args.use_normal, use_multiview=args.use_multiview)
-        dataloader = DataLoader(dataset, batch_size=args.batch_size, collate_fn=collate_random, num_workers=args.num_workers)
+        dataset = ScannetDataset(phase, scene_list, is_weighting=not args.no_weighting, use_color=args.use_color, use_normal=args.use_normal, use_multiview=args.use_multiview)
+        dataloader = DataLoader(dataset, batch_size=args.batch_size, collate_fn=collate_random, num_workers=args.num_workers, pin_memory=True)
 
     return dataset, dataloader
 
@@ -33,7 +33,7 @@ def get_num_params(model):
 
     return num_params
 
-def get_solver(args, dataloader, stamp, weight):
+def get_solver(args, dataset, dataloader, stamp, weight):
     sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '../pointnet2/'))
     Pointnet = importlib.import_module("pointnet2_semseg")
     input_channels = int(args.use_color) * 3 + int(args.use_normal) * 3 + int(args.use_multiview) * 128
@@ -42,7 +42,7 @@ def get_solver(args, dataloader, stamp, weight):
     num_params = get_num_params(model)
     criterion = WeightedCrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
-    solver = Solver(model, dataloader, criterion, optimizer, args.batch_size, stamp, args.use_wholescene, args.ds, args.df)
+    solver = Solver(model, dataset, dataloader, criterion, optimizer, args.batch_size, stamp, args.use_wholescene, args.ds, args.df)
 
     return solver, num_params
 
@@ -77,8 +77,12 @@ def train(args):
         val_scene_list = get_scene_list(CONF.SCANNETV2_VAL)
 
     # dataloader
-    train_dataset, train_dataloader = get_dataloader(args, train_scene_list)
-    val_dataset, val_dataloader = get_dataloader(args, val_scene_list)
+    train_dataset, train_dataloader = get_dataloader(args, train_scene_list, "train")
+    val_dataset, val_dataloader = get_dataloader(args, val_scene_list, "val")
+    dataset = {
+        "train": train_dataset,
+        "val": val_dataset
+    }
     dataloader = {
         "train": train_dataloader,
         "val": val_dataloader
@@ -92,7 +96,7 @@ def train(args):
     if args.tag: stamp += "_"+args.tag.upper()
     root = os.path.join(CONF.OUTPUT_ROOT, stamp)
     os.makedirs(root, exist_ok=True)
-    solver, num_params = get_solver(args, dataloader, stamp, weight)
+    solver, num_params = get_solver(args, dataset, dataloader, stamp, weight)
     
     print("\n[info]")
     print("Train examples: {}".format(train_examples))

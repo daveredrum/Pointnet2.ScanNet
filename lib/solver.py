@@ -58,11 +58,12 @@ BEST_REPORT_TEMPLATE = """
 """
 
 class Solver():
-    def __init__(self, model, dataloader, criterion, optimizer, batch_size, stamp, is_wholescene=True, decay_step=10, decay_factor=0.7):
+    def __init__(self, model, dataset, dataloader, criterion, optimizer, batch_size, stamp, is_wholescene=True, decay_step=10, decay_factor=0.7):
         self.epoch = 0                    # set in __call__
         self.verbose = 0                  # set in __call__
         
         self.model = model
+        self.dataset = dataset
         self.dataloader = dataloader
         self.criterion = criterion
         self.optimizer = optimizer
@@ -110,6 +111,11 @@ class Solver():
         
         for epoch_id in range(epoch):
             print("epoch {} starting...".format(epoch_id + 1))
+            
+            # generate new chunks
+            self.dataset["train"].generate_chunks()
+            self.dataset["val"].generate_chunks()
+            
             # train
             self._set_phase("train")
             self._train(self.dataloader["train"], epoch_id)
