@@ -31,7 +31,7 @@ class ScannetDataset():
         self.scene_data = {}
         scene_points_list = []
         semantic_labels_list = []
-        for scene_id in self.scene_list:
+        for scene_id in tqdm(self.scene_list):
             scene_data = np.load(CONF.SCANNETV2_FILE.format(scene_id))
             label = scene_data[:, 10]
 
