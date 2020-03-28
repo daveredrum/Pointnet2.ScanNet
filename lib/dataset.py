@@ -204,13 +204,9 @@ class ScannetDataset():
         """
 
         print("generate new chunks for {}...".format(self.phase))
-        if self.use_multiview:
-            scene_features = h5py.File(CONF.MULTIVIEW, "r", libver="latest")
         for scene_id in tqdm(self.scene_list):
             scene = self.scene_data[scene_id]
             semantic = scene[:, 10].astype(np.int32)
-            if self.use_multiview:
-                feature = scene_features.get(scene_id)[()]
 
             coordmax = np.max(scene, axis=0)[:3]
             coordmin = np.min(scene, axis=0)[:3]
@@ -224,8 +220,6 @@ class ScannetDataset():
                 curchoice = np.sum((scene[:, :3]>=(curmin-0.2))*(scene[:, :3]<=(curmax+0.2)),axis=1)==3
                 cur_point_set = scene[curchoice]
                 cur_semantic_seg = semantic[curchoice]
-                if self.use_multiview:
-                    cur_feature = feature[curchoice]
 
                 if len(cur_semantic_seg)==0:
                     continue
@@ -239,11 +233,7 @@ class ScannetDataset():
                     break
             
             # store chunk
-            if self.use_multiview:
-                chunk = np.concatenate([cur_point_set, cur_feature], axis=1)
-            else:
-                chunk = cur_point_set
-
+            chunk = cur_point_set
             choices = np.random.choice(chunk.shape[0], self.npoints, replace=True)
             chunk = chunk[choices]
             self.chunk_data[scene_id] = chunk
