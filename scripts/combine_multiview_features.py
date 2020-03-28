@@ -35,6 +35,6 @@ if __name__ == "__main__":
         multiview_features = multiview_data.get(scene_id)[()]
         scene_data[scene_id] = np.concatenate((scene_data[scene_id], multiview_features), 1)
 
-        np.save(scene_data[scene_id], os.path.join(SCANNET_DATA, scene_id)+".npy")
+        np.save(os.path.join(SCANNET_DATA, scene_id)+".npy", scene_data[scene_id])
 
     print("done!")
