@@ -113,6 +113,7 @@ if __name__ == "__main__":
     scene_list = get_scene_list()
     scene_data = get_scene_data(scene_list)
     with h5py.File(ENET_FEATURE_DATABASE, "w", libver="latest") as database:
+        print("projecting multiview features to point cloud...")
         for scene_id in tqdm(scene_list):
             scene = scene_data[scene_id]
             # load frames
@@ -155,5 +156,7 @@ if __name__ == "__main__":
 
             # save
             database.create_dataset(scene_id, data=point_features.cpu().numpy())
+
+    print("done!")
 
     
