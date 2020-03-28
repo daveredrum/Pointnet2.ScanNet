@@ -12,6 +12,7 @@ from lib.config import CONF
 
 CLASS_NAMES = g_label_names
 RAW2SCANNET = g_raw2scannet
+NUM_MAX_PTS = 80000
 
 def collect_one_scene_data_label(scene_name, out_filename):
     # Over-segmented segments: maps from segment to vertex/point IDs
@@ -69,6 +70,12 @@ def collect_one_scene_data_label(scene_name, out_filename):
     instance_labels = np.concatenate(instance_labels_list, 0) 
     semantic_labels = np.concatenate(semantic_labels_list, 0)
     data = np.concatenate((scene_points, instance_labels, semantic_labels), 1)
+
+    if data.shape[0] > NUM_MAX_PTS:
+        choices = np.random.choice(data.shape[0], NUM_MAX_PTS, replace=False)
+        data = data[choices]
+
+    print("shape of subsampled scene data: {}".format(data.shape))
     np.save(out_filename, data)
 
 if __name__=='__main__':
