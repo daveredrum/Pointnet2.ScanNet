@@ -19,7 +19,8 @@ def get_scene_list():
 
 def load_scene(scene_list):
     scene_data = {}
-    for scene_id in scene_list:
+    print("loading data...")
+    for scene_id in tqdm(scene_list):
         scene_data[scene_id] = np.load(os.path.join(SCANNET_DATA, scene_id)+".npy")[:, :3]
 
     return scene_data
