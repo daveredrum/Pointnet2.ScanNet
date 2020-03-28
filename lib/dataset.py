@@ -12,7 +12,7 @@ sys.path.append(".")
 from lib.config import CONF
 
 class ScannetDataset():
-    def __init__(self, phase, scene_list, num_classes=21, npoints=8192, is_weighting=True, use_multiview=False, use_color=False, use_normal=False, use_label=False):
+    def __init__(self, phase, scene_list, num_classes=21, npoints=8192, is_weighting=True, use_multiview=False, use_color=False, use_normal=False):
         self.phase = phase
         assert phase in ["train", "val", "test"]
         self.scene_list = scene_list
@@ -22,7 +22,6 @@ class ScannetDataset():
         self.use_multiview = use_multiview
         self.use_color = use_color
         self.use_normal = use_normal
-        self.use_label = use_label
         self.chunk_data = {} # init in generate_chunks()
 
         self._prepare_weights()
