@@ -124,9 +124,9 @@ if __name__ == "__main__":
 
     print("computing multiview projections...")
     for scene_id in tqdm(scene_list):
-        if os.path.exists(PROJECTION_PATH.format(scene_id, "3d")) and os.path.exists(PROJECTION_PATH.format(scene_id, "2d")):
-            print("skipping {}...".format(scene_id))
-            continue
+        # if os.path.exists(PROJECTION_PATH.format(scene_id, "3d")) and os.path.exists(PROJECTION_PATH.format(scene_id, "2d")):
+        #     print("skipping {}...".format(scene_id))
+        #     continue
 
         point_cloud = scene_data[scene_id]
         frame_list = list(map(lambda x: x.split(".")[0], os.listdir(SCANNET_FRAME_ROOT.format(scene_id, "color"))))
