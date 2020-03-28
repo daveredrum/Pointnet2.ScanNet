@@ -72,9 +72,6 @@ class ScannetDataset():
         if self.use_normal:
             point_set = np.concatenate([point_set, normal], axis=1)
 
-        if self.use_label:
-            point_set = np.concatenate([point_set, label], axis=1)
-
         if self.phase == "train":
             point_set = self._augment(point_set)
         
