@@ -12,7 +12,7 @@ from lib.config import CONF
 
 CLASS_NAMES = g_label_names
 RAW2SCANNET = g_raw2scannet
-NUM_MAX_PTS = 80000
+NUM_MAX_PTS = 100000
 
 def collect_one_scene_data_label(scene_name, out_filename):
     # Over-segmented segments: maps from segment to vertex/point IDs
