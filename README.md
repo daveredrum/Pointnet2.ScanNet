@@ -45,10 +45,6 @@ project the multiview features from image space to point cloud
 ```shell
 python project_multiview_features.py
 ```
-combine the multiview features with point cloud
-```shell
-python combine_multiview_features.py
-```
 
 ## Usage
 ### preprocess ScanNet scenes
