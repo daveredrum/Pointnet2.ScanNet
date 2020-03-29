@@ -307,7 +307,7 @@ class ScannetDatasetWholeScene():
             point_set_ini = np.concatenate([point_set_ini, normal], axis=1)
 
         if self.use_multiview:
-            multiview_features = self.multiview_features[index]
+            multiview_features = self.multiview_data[index]
             point_set_ini = np.concatenate([point_set_ini, multiview_features], axis=1)
 
         semantic_seg_ini = self.semantic_labels_list[index].astype(np.int32)
