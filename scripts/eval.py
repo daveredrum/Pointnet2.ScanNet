@@ -4,6 +4,7 @@ import importlib
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
+from tqdm import tqdm
 
 # for PointNet2.PyTorch module
 import sys
@@ -154,7 +155,7 @@ def eval_wholescene(args, model, dataloader):
     masks = np.zeros((len(dataloader), CONF.NUM_CLASSES))
 
     # iter
-    for load_idx, data in enumerate(dataloader):
+    for load_idx, data in enumerate(tqdm(dataloader)):
         # feed
         pointacc, pointacc_per_class, voxacc, voxacc_per_class, voxcaliacc, pointmiou, voxmiou, mask = eval_one_batch(args, model, data)
 
@@ -181,6 +182,7 @@ def evaluate(args):
     print("loading model...")
     model_path = os.path.join(CONF.OUTPUT_ROOT, args.folder, "model.pth")
     Pointnet = importlib.import_module("pointnet2_semseg")
+    input_channels = int(args.use_color) * 3 + int(args.use_normal) * 3 + int(args.use_multiview) * 128
     model = Pointnet.get_model(num_classes=CONF.NUM_CLASSES, is_msg=args.use_msg, input_channels=input_channels, use_xyz=not args.no_xyz, bn=not args.no_bn).cuda()
     model.load_state_dict(torch.load(model_path))
     model.eval()

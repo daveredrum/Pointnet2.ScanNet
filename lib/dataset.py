@@ -260,13 +260,15 @@ class ScannetDatasetWholeScene():
         self.use_normal = use_normal
         self.use_multiview = use_multiview
 
-        self.multiview_data = {}
         self._load_scene_file()
 
     def _load_scene_file(self):
         self.scene_points_list = []
         self.semantic_labels_list = []
-        self.multiview_features = []
+        if self.use_multiview:
+            multiview_database = h5py.File(CONF.MULTIVIEW, "r", libver="latest")
+            self.multiview_data = []
+
         for scene_id in tqdm(self.scene_list):
             scene_data = np.load(CONF.SCANNETV2_FILE.format(scene_id))
             label = scene_data[:, 10].astype(np.int32)
@@ -274,10 +276,8 @@ class ScannetDatasetWholeScene():
             self.semantic_labels_list.append(label)
 
             if self.use_multiview:
-                if not self.multiview_data:
-                    self.multiview_data = h5py.File(CONF.MULTIVIEW, "r", libver="latest")
-                
-                self.multiview_features.append(self.multiview_data[scene_id])
+                feature = multiview_database.get(scene_id)[()]
+                self.multiview_data.append(feature)
 
         if self.is_weighting:
             labelweights = np.zeros(CONF.NUM_CLASSES)
