@@ -99,8 +99,10 @@ The generated `<scene_id>.ply` is stored in `outputs/<time_stamp>/preds` - Drag 
 
 ## TODOs
 
-- [] Release all pretrained models
+- [ ] Release all pretrained models
+- [x] Upgrade to PyTorch 1.8
+- [x] Fix issues with loading pre-trained models
 
 ## Acknowledgement
 * [charlesq34/pointnet2](https://github.com/charlesq34/pointnet2): Paper author and official code repo.
-* [sshaoshuai/Pointnet2.PyTorch](https://github.com/sshaoshuai/Pointnet2.PyTorch): Initial work of PyTorch implementation of PointNet++ with CUDA acceleration.
+* [erikwijmans/Pointnet2_PyTorch](https://github.com/erikwijmans/Pointnet2_PyTorch): Initial work of PyTorch implementation of PointNet++ with CUDA acceleration.
