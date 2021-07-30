@@ -9,7 +9,7 @@ import sys
 sys.path.append(".")
 from lib.utils import decode_eta
 from lib.config import CONF
-from eval import compute_acc, compute_miou
+from scripts.eval import compute_acc, compute_miou
 
 ITER_REPORT_TEMPLATE = """
 ----------------------iter: [{global_iter_id}/{total_iter}]----------------------

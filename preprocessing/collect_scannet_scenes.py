@@ -36,8 +36,8 @@ def collect_one_scene_data_label(scene_name, out_filename):
     # Instances over-segmented segment IDs: annotation on segments
     instance_segids = []
     labels = []
-    # annotation_filename = os.path.join(data_folder, '%s.aggregation.json'%(scene_name))
-    annotation_filename = os.path.join(data_folder, '%s_vh_clean.aggregation.json'%(scene_name))
+    annotation_filename = os.path.join(data_folder, '%s.aggregation.json'%(scene_name)) # low-res mesh
+    # annotation_filename = os.path.join(data_folder, '%s_vh_clean.aggregation.json'%(scene_name)) # high-res mesh
     #print annotation_filename
     with open(annotation_filename) as jsondata:
         d = json.load(jsondata)

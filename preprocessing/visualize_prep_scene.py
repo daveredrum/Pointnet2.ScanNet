@@ -18,9 +18,9 @@ def visualize(args):
                 scene[i][0],
                 scene[i][1],
                 scene[i][2],
-                CONF.PALETTE[int(scene[i][7])][0],
-                CONF.PALETTE[int(scene[i][7])][1],
-                CONF.PALETTE[int(scene[i][7])][2]
+                CONF.PALETTE[int(scene[i][-1])][0],
+                CONF.PALETTE[int(scene[i][-1])][1],
+                CONF.PALETTE[int(scene[i][-1])][2]
             )
         )
     

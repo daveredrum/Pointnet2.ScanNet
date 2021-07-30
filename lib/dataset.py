@@ -325,7 +325,7 @@ class ScannetDatasetWholeScene():
             for j in range(nsubvolume_y):
                 curmin = coordmin+[i*xlength, j*ylength, 0]
                 curmax = coordmin+[(i+1)*xlength, (j+1)*ylength, coordmax[2]-coordmin[2]]
-                mask = np.all((point_set_ini[:, :3]>=curmin)*(point_set_ini[:, :3]<=curmax), axis=1)
+                mask = np.sum((point_set_ini[:, :3]>=(curmin-0.01))*(point_set_ini[:, :3]<=(curmax+0.01)), axis=1)==3
                 cur_point_set = point_set_ini[mask,:]
                 cur_semantic_seg = semantic_seg_ini[mask]
                 if len(cur_semantic_seg) == 0:
@@ -335,8 +335,8 @@ class ScannetDatasetWholeScene():
                 point_set = cur_point_set[choice,:] # Nx3
                 semantic_seg = cur_semantic_seg[choice] # N
                 mask = mask[choice]
-                if sum(mask)/float(len(mask))<0.01:
-                    continue
+                # if sum(mask)/float(len(mask))<0.01:
+                #     continue
 
                 sample_weight = self.labelweights[semantic_seg]
                 sample_weight *= mask # N

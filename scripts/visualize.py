@@ -29,9 +29,9 @@ def forward(args, model, coords, feats):
 def filter_points(coords, preds):
     assert coords.shape[0] == preds.shape[0]
 
-    coord_hash = [hash(str(coords[point_idx][0]) + str(coords[point_idx][1]) + str(coords[point_idx][2])) for point_idx in range(coords.shape[0])]
-    _, coord_ids = np.unique(np.array(coord_hash), return_index=True)
+    _, coord_ids = np.unique(coords, axis=0, return_index=True)
     coord_filtered, pred_filtered = coords[coord_ids], preds[coord_ids]
+    # coord_filtered, pred_filtered = coords, preds
     filtered = []
     for point_idx in range(coord_filtered.shape[0]):
         filtered.append(
@@ -142,7 +142,7 @@ def evaluate(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--folder', type=str, help='output folder containing the best model from training', required=True)
-    parser.add_argument('--batch_size', type=int, help='size of the batch/chunk', default=8)
+    parser.add_argument('--batch_size', type=int, help='size of the batch/chunk', default=1)
     parser.add_argument('--gpu', type=str, help='gpu', default='0')
     parser.add_argument("--scene_id", type=str, default=None)
     parser.add_argument('--no_bn', action="store_true", help="do not apply batch normalization in pointnet++")
