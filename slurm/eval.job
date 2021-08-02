@@ -16,5 +16,5 @@
 date;hostname;pwd
 
 # scripts
-python scripts/eval.py --folder 2021-07-29_11-25-11_SSG --use_color --use_normal
-# python scripts/eval.py --folder 2021-07-29_11-24-45_MSG --use_color --use_normal --use_msg
+# python scripts/eval.py --folder 2021-07-30_21-39-11_SSG --use_multiview --use_normal
+python scripts/eval.py --folder 2021-07-30_21-39-10_MSG --use_multiview --use_normal --use_msg
