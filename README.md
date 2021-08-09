@@ -6,10 +6,10 @@ The semantic segmentation results in percentage on the ScanNet train/val split i
 
 | use XYZ | use color | use normal | use multiview | use MSG | mIoU | weights |
 |---------|-----------|------------|---------------|---------|------|---------|
-|:heavy_check_mark:         |:heavy_check_mark:           |:heavy_check_mark:            |:white_check_mark:               |:white_check_mark:         |50.48      |[download](https://drive.google.com/file/d/16rsLQwonnf0vvAi4QFaUg6xCxD2pJqEP/view?usp=sharing)         |
-|:heavy_check_mark:         |:heavy_check_mark:           |:heavy_check_mark:            |:white_check_mark:               |:heavy_check_mark:         |52.50      |[download](https://drive.google.com/file/d/1iMmuZgh8VeYO02tdOSgSKVyXDcvXPior/view?usp=sharing)         |
-|:heavy_check_mark:         |:white_check_mark:           |:heavy_check_mark:            |:heavy_check_mark:               |:white_check_mark:         |65.75      |[download](https://drive.google.com/file/d/1vK9VwIMu__TKOQIlwoN8XZw70FPM5loI/view?usp=sharing)         |
-|:heavy_check_mark:         |:white_check_mark:           |:heavy_check_mark:            |:heavy_check_mark:               |:heavy_check_mark:         |67.60      |[download](https://drive.google.com/file/d/1twJmV1QuAZ2GHfp8Ae7HyJkKvWbWPK5l/view?usp=sharing)         |
+|:heavy_check_mark:         |:heavy_check_mark:           |:heavy_check_mark:            |-               |-         |50.48      |[download](https://drive.google.com/file/d/16rsLQwonnf0vvAi4QFaUg6xCxD2pJqEP/view?usp=sharing)         |
+|:heavy_check_mark:         |:heavy_check_mark:           |:heavy_check_mark:            |-               |:heavy_check_mark:         |52.50      |[download](https://drive.google.com/file/d/1iMmuZgh8VeYO02tdOSgSKVyXDcvXPior/view?usp=sharing)         |
+|:heavy_check_mark:         |-           |:heavy_check_mark:            |:heavy_check_mark:               |-         |65.75      |[download](https://drive.google.com/file/d/1vK9VwIMu__TKOQIlwoN8XZw70FPM5loI/view?usp=sharing)         |
+|:heavy_check_mark:         |-           |:heavy_check_mark:            |:heavy_check_mark:               |:heavy_check_mark:         |67.60      |[download](https://drive.google.com/file/d/1twJmV1QuAZ2GHfp8Ae7HyJkKvWbWPK5l/view?usp=sharing)         |
 
 If you want to play around with the pre-trained model, please download the zip file and unzip it under `outputs/`.
 
