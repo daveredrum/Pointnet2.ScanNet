@@ -60,7 +60,7 @@ Parse the ScanNet data into `*.npy` files and save them in `preprocessing/scanne
 ```shell
 python preprocessing/collect_scannet_scenes.py
 ```
-### Panity check
+### Sanity check
 Don't forget to visualize the preprocessed scenes to check the consistency
 ```shell
 python preprocessing/visualize_prep_scene.py --scene_id <scene_id>
